@@ -1,0 +1,27 @@
+# Supabase project config for Grinda (used by `supabase start` / `supabase deploy`).
+project_id = "grinda"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[auth]
+enabled = true
+site_url = "grinda://auth"
+
+[auth.external.apple]
+enabled = true
+# Bundle ID of the iOS app; native Sign in with Apple uses id_token exchange.
+client_id = "com.cipherdriftx.grinda"
+secret = ""
+
+# Functions called by Stripe, pg_cron or anonymous visitors don't carry a user JWT.
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.settle]
+verify_jwt = false
+
+[functions.public-stats]
+verify_jwt = false
