@@ -50,6 +50,9 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.cipherdriftx.grinda
+            CFBundleURLSchemes: [grinda]
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark

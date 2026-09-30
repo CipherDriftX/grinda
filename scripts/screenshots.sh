@@ -10,25 +10,7 @@ BUNDLE="com.cipherdriftx.grinda"
 SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning progress wallet finish paywall}"
 mkdir -p "$OUT"
 
-# Prefer the largest current iPhone (6.9" App Store class).
-UDID=$(xcrun simctl list devices available -j | python3 -c '
-import json, sys, re
-data = json.load(sys.stdin)["devices"]
-best = None
-for runtime, devs in data.items():
-    if "iOS" not in runtime:
-        continue
-    ver = tuple(int(x) for x in re.findall(r"(\d+)", runtime.split("iOS")[-1])[:2])
-    for d in devs:
-        n = d["name"]
-        if not n.startswith("iPhone"):
-            continue
-        score = (ver, "Pro Max" in n, "Pro" in n, n)
-        if best is None or score > best[0]:
-            best = (score, d["udid"], n, runtime)
-print(best[1])
-print(best[2], best[3], file=sys.stderr)
-')
+UDID="${SIM_UDID:-$(bash "$(dirname "$0")/sim-pick.sh")}"
 echo "Simulator: $UDID"
 
 xcrun simctl boot "$UDID" || true
@@ -43,7 +25,7 @@ for appearance in light dark; do
   for screen in $SCREENS; do
     xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
     xcrun simctl launch "$UDID" "$BUNDLE" -demo YES -screen "$screen" >/dev/null
-    sleep "${SETTLE:-5}"
+    sleep "${SETTLE:-4}"
     xcrun simctl io "$UDID" screenshot --type=png "$OUT/$appearance/$screen.png" >/dev/null
     echo "captured $appearance/$screen"
   done

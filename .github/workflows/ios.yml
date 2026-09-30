@@ -26,6 +26,12 @@ jobs:
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
 
+      - name: Boot Simulator early (boots while we build)
+        run: |
+          UDID=$(bash scripts/sim-pick.sh)
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID" || true
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
