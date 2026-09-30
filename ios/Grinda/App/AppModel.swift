@@ -88,7 +88,11 @@ final class AppModel {
 
     init(demo: Bool) {
         isDemo = demo
-        health = demo ? DemoHealthService() : HealthKitService()
+        if demo {
+            health = DemoHealthService()
+        } else {
+            health = HealthKitService()
+        }
         if demo {
             profile = DemoSeed.profile
             races = DemoSeed.races()
@@ -96,9 +100,9 @@ final class AppModel {
             publicStats = DemoSeed.stats
             healthConnected = true
         } else {
-            profile = profileStore.load() ?? Profile()
-            races = racesStore.load() ?? []
-            ledger = ledgerStore.load() ?? []
+            profile = FileStore<Profile>(name: "profile").load() ?? Profile()
+            races = FileStore<[Race]>(name: "races").load() ?? []
+            ledger = FileStore<[LedgerEntry]>(name: "ledger").load() ?? []
             healthConnected = UserDefaults.standard.bool(forKey: "grinda.healthConnected")
         }
     }
