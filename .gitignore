@@ -1,0 +1,29 @@
+# Xcode
+*.xcodeproj/
+!ios/*.xcodeproj/project.xcworkspace/xcshareddata/
+xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+*.ipa
+*.dSYM.zip
+# SwiftPM
+.swiftpm/
+.build/
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output
+# Secrets
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.mobileprovision
+supabase/.temp/
+supabase/.branches/
+# OS / tooling
+.DS_Store
+node_modules/
+.impeccable/config.local.json
