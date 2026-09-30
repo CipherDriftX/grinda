@@ -1,0 +1,6 @@
+// Values come from Secrets.xcconfig (git-ignored) or CI environment.
+// NOTE: "//" starts a comment in xcconfig, so write URLs as https:/$()/example.supabase.co
+GRINDA_SUPABASE_URL =
+GRINDA_SUPABASE_ANON_KEY =
+GRINDA_STRIPE_PUBLISHABLE_KEY =
+#include? "Secrets.xcconfig"

@@ -1,0 +1,144 @@
+import SwiftUI
+import WidgetKit
+
+struct TrackEntry: TimelineEntry {
+    let date: Date
+    let snapshot: WidgetSnapshot
+}
+
+struct TrackProvider: TimelineProvider {
+    func placeholder(in context: Context) -> TrackEntry {
+        TrackEntry(date: .now, snapshot: .placeholder)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (TrackEntry) -> Void) {
+        completion(TrackEntry(date: .now, snapshot: WidgetSnapshot.load() ?? .placeholder))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<TrackEntry>) -> Void) {
+        let entry = TrackEntry(date: .now, snapshot: WidgetSnapshot.load() ?? .placeholder)
+        // The app reloads timelines whenever steps change; this is only a fallback.
+        completion(Timeline(entries: [entry], policy: .after(.now.addingTimeInterval(30 * 60))))
+    }
+}
+
+/// Stadium lane used by the widget, same geometry as the app's track.
+struct WidgetTrack: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(roundedRect: rect, cornerRadius: rect.height / 2, style: .continuous)
+    }
+}
+
+struct GrindaWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: TrackEntry
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular: circular
+        case .accessoryRectangular: rectangular
+        case .systemMedium: medium
+        default: small
+        }
+    }
+
+    private var s: WidgetSnapshot { entry.snapshot }
+    private var done: Bool { s.steps >= s.goal }
+
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                WidgetTrack().stroke(Palette.lane, lineWidth: 10)
+                WidgetTrack().trim(from: 0, to: s.progress)
+                    .stroke(done ? Palette.volt : .white, style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                Text(s.steps.formatted())
+                    .font(BrandFont.numerals(30))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.6)
+            }
+            .frame(height: 64)
+            Spacer(minLength: 0)
+            Text(done ? "Goal hit" : "\(s.remaining.formatted()) to go")
+                .font(.system(.subheadline, weight: .semibold))
+                .foregroundStyle(.white)
+            if let stake = s.stakeLabel {
+                Text("\(stake) on the line")
+                    .font(BrandFont.label(12))
+                    .textCase(.uppercase)
+                    .foregroundStyle(Palette.onFieldSecondary)
+            }
+        }
+        .containerBackground(for: .widget) { Palette.field }
+    }
+
+    private var medium: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                WidgetTrack().stroke(Palette.lane, lineWidth: 12)
+                WidgetTrack().trim(from: 0, to: s.progress)
+                    .stroke(done ? Palette.volt : .white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                VStack(spacing: 0) {
+                    Text(s.steps.formatted()).font(BrandFont.numerals(34)).foregroundStyle(.white)
+                    Text("of \(s.goal.formatted())").font(.caption2.weight(.semibold)).foregroundStyle(Palette.onFieldSecondary)
+                }
+            }
+            .frame(width: 150, height: 84)
+            VStack(alignment: .leading, spacing: 4) {
+                if let race = s.raceName {
+                    Text(race.uppercased()).font(BrandFont.label(13)).foregroundStyle(Palette.onFieldSecondary)
+                }
+                if let i = s.dayIndex, let n = s.dayCount {
+                    Text("Day \(i) of \(n)").font(.headline).foregroundStyle(.white)
+                }
+                Text(done ? "Goal hit. Nice." : "\(s.remaining.formatted()) to go")
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                if let stake = s.stakeLabel {
+                    Text("\(stake) on the line").font(.caption).foregroundStyle(Palette.onFieldSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .containerBackground(for: .widget) { Palette.field }
+    }
+
+    private var circular: some View {
+        Gauge(value: s.progress) {
+            Image(systemName: "figure.walk")
+        } currentValueLabel: {
+            Text(compact(s.steps)).font(BrandFont.numerals(15))
+        }
+        .gaugeStyle(.accessoryCircular)
+        .containerBackground(for: .widget) { Color.clear }
+    }
+
+    private var rectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(done ? "Goal hit" : "\(s.remaining.formatted()) to go").font(.headline)
+            Gauge(value: s.progress) { EmptyView() }.gaugeStyle(.accessoryLinearCapacity)
+            if let stake = s.stakeLabel { Text("\(stake) on the line").font(.caption2) }
+        }
+        .containerBackground(for: .widget) { Color.clear }
+    }
+
+    private func compact(_ n: Int) -> String {
+        n >= 10_000 ? String(format: "%.0fk", Double(n) / 1000) : String(format: "%.1fk", Double(n) / 1000)
+    }
+}
+
+struct GrindaTrackWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "GrindaTrack", provider: TrackProvider()) { entry in
+            GrindaWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Today's track")
+        .description("Your steps, what's left, and what's on the line.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
+    }
+}
+
+@main
+struct GrindaWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        GrindaTrackWidget()
+    }
+}

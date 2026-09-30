@@ -27,3 +27,4 @@ supabase/.branches/
 .DS_Store
 node_modules/
 .impeccable/config.local.json
+ios/Config/Secrets.xcconfig
