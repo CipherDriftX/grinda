@@ -85,8 +85,8 @@ struct DemoRouter: View {
         case "progress": MainTabs().onAppear { model.tab = .progress }
         case "wallet": MainTabs().onAppear { model.tab = .wallet }
         case "contract": NavigationStack { ContractView(template: RaceTemplate.board[1], initialStake: 20) }
-        case "pinning": NavigationStack { ContractView(template: RaceTemplate.board[0], initialStake: 20, previewPins: 2) }
-        case "pinning-demo": NavigationStack { ContractView(template: RaceTemplate.board[0], initialStake: 20, autoplay: true) }
+        case "pinning": PinningStage(previewPins: 2)
+        case "pinning-demo": PinningStage(autoplay: true)
         case "finish": FinishView(race: DemoSeed.races()[1])
         case "paywall": PaywallView()
         case "profile": ProfileView()

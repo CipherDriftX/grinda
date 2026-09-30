@@ -53,7 +53,7 @@ private struct Passbook: View {
 
             VStack(spacing: 10) {
                 LeaderLine(label: "Back to you, all time", value: model.returnedTotal.formatted, emphasis: true)
-                LeaderLine(label: "Kept from missed races", value: model.keptTotal.formatted, emphasis: false)
+                LeaderLine(label: "Kept from misses", value: model.keptTotal.formatted, emphasis: false)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)
@@ -211,7 +211,7 @@ private struct CommunityLedger: View {
             if let s = model.publicStats {
                 VStack(spacing: 10) {
                     LeaderLine(label: "Returned to walkers", value: Money(cents: Int(s.returnedCents), currency: s.currency).formatted, emphasis: true)
-                    LeaderLine(label: "Kept from missed races", value: Money(cents: Int(s.keptCents), currency: s.currency).formatted, emphasis: false)
+                    LeaderLine(label: "Kept from misses", value: Money(cents: Int(s.keptCents), currency: s.currency).formatted, emphasis: false)
                     LeaderLine(label: "Races finished", value: s.racesFinished.formatted(), emphasis: false)
                     LeaderLine(label: "Finish rate", value: s.completionRate.formatted(.percent.precision(.fractionLength(0))), emphasis: false)
                 }

@@ -7,7 +7,7 @@ set -euo pipefail
 APP="$1"
 OUT="$2"
 BUNDLE="com.cipherdriftx.grinda"
-SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning progress wallet finish paywall}"
+SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning progress wallet finish}"
 mkdir -p "$OUT"
 
 UDID="${SIM_UDID:-$(bash "$(dirname "$0")/sim-pick.sh")}"
@@ -31,13 +31,14 @@ for appearance in light dark; do
   done
 done
 
-# A short screen recording of the signature interaction (hold-to-pin) for the README.
+# A screen recording of the signature interaction (hold-to-pin) for the README.
 xcrun simctl ui "$UDID" appearance light
 xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
-xcrun simctl launch "$UDID" "$BUNDLE" -demo YES -screen pinning-demo >/dev/null
 xcrun simctl io "$UDID" recordVideo --codec=h264 --force "$OUT/pinning.mp4" &
 REC=$!
-sleep 9
+sleep 2
+xcrun simctl launch "$UDID" "$BUNDLE" -demo YES -screen pinning-demo >/dev/null
+sleep 8
 kill -INT "$REC" || true
 wait "$REC" || true
 echo "done"

@@ -350,7 +350,7 @@ private struct BaselineStep: View {
                     .padding(.top, -12)
             }
             VStack(spacing: 14) {
-                Text("Your goal")
+                Text("YOUR GOAL")
                     .font(BrandFont.label(13))
                     .foregroundStyle(Palette.inkSecondary)
                 HStack {

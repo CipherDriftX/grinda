@@ -227,3 +227,35 @@ private struct EnteredOverlay: View {
         }
     }
 }
+
+/// Demo/marketing stage for the signature interaction: the bib and the
+/// hold-to-pin button on one screen, no scrolling.
+struct PinningStage: View {
+    var previewPins = 0
+    var autoplay = false
+    @State private var pins = 0
+    @State private var done = false
+
+    var body: some View {
+        VStack(spacing: 28) {
+            Text(done ? "Pinned. You're in." : "Hold to commit")
+                .font(.system(.largeTitle, weight: .bold))
+                .foregroundStyle(Palette.ink)
+                .contentTransition(.opacity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            BibCard(template: RaceTemplate.board[0], stake: 20, bibNumber: 2_417, pinned: pins)
+            Text("Four pins, one for each corner. Let go early and nothing happens.")
+                .font(.body)
+                .foregroundStyle(Palette.inkSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer()
+            HoldToPinButton(title: "Hold to pin your bib", pins: $pins, autoplay: autoplay) {
+                withAnimation(Motion.standard) { done = true }
+            }
+        }
+        .padding(20)
+        .padding(.top, 24)
+        .background(Palette.ground.ignoresSafeArea())
+        .onAppear { pins = previewPins }
+    }
+}
