@@ -95,8 +95,9 @@ final class AppModel {
         }
         if demo {
             profile = DemoSeed.profile
-            races = DemoSeed.races()
-            ledger = DemoSeed.ledger(races: races)
+            let seeded = DemoSeed.races()
+            races = seeded
+            ledger = DemoSeed.ledger(races: seeded)
             publicStats = DemoSeed.stats
             healthConnected = true
         } else {
