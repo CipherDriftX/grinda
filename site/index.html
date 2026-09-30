@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grinda: Walk it off. Keep your money.</title>
+  <meta name="description" content="Stake money on your daily walk. Hit your steps and every cent comes back. Short races are only a hold on your card.">
+  <meta name="theme-color" content="#1f4fd8">
+  <meta property="og:title" content="Grinda: Walk it off. Keep your money.">
+  <meta property="og:description" content="Stake money on your daily walk. Finish and get every cent back.">
+  <meta property="og:image" content="assets/appicon.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/symbol-cobalt.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="field">
+    <div class="wrap">
+      <nav>
+        <a href="./" aria-label="Grinda home"><img src="assets/lockup-white.svg" alt="Grinda"></a>
+        <div class="links">
+          <a href="#how">How it works</a>
+          <a href="#money">Money</a>
+          <a href="support.html">Support</a>
+        </div>
+      </nav>
+      <div class="hero">
+        <div>
+          <h1>Walk it off.<br>Keep your money.</h1>
+          <p>Put money on your daily walk. Hit your steps and every cent comes back. It's the push that finally makes the weight come off.</p>
+          <a class="cta" href="#download">Get Grinda for iPhone</a>
+          <div class="trust">Payments by Stripe · Steps from Apple Health · 18+ for staked races</div>
+        </div>
+        <svg class="track" viewBox="0 0 520 300" role="img" aria-label="A running track, two thirds complete">
+          <rect x="30" y="30" width="460" height="240" rx="120" fill="none" stroke="#1942b8" stroke-width="40"/>
+          <rect x="10" y="10" width="500" height="280" rx="140" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+          <rect x="50" y="50" width="420" height="200" rx="100" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+          <rect class="progress" x="30" y="30" width="460" height="240" rx="120" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" pathLength="1000"/>
+          <text x="260" y="160" text-anchor="middle" fill="#fff" style="font-stretch:62%;font-weight:900;font-size:72px">6,480</text>
+          <text x="260" y="195" text-anchor="middle" fill="#c9d6ff" style="font-weight:600;font-size:16px">3,520 to go · about 36 min</text>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="how">
+      <div class="wrap">
+        <h2>Three steps. No fine print.</h2>
+        <p class="lead">People with money on the line walked about 31% more, and three in four hit their goal, in a study of nearly 73,000 step-challenge players.</p>
+        <div class="bibs">
+          <article class="bib">
+            <div class="n">1</div>
+            <h3>Pin a bib</h3>
+            <p>Choose a race, like 8,000 steps a day for 5 days, and a stake from 5 to 500.</p>
+            <div class="band">Short races: a hold, never a charge</div>
+          </article>
+          <article class="bib">
+            <div class="n">2</div>
+            <h3>Walk your laps</h3>
+            <p>iPhone, Apple Watch, Garmin, Fitbit or Oura all count through Apple Health. One nudge in the evening if you're behind.</p>
+            <div class="band">Typed-in steps don't count</div>
+          </article>
+          <article class="bib">
+            <div class="n">3</div>
+            <h3>Get it all back</h3>
+            <p>Finish and your money is back within minutes of settling, 3 hours after your last day ends.</p>
+            <div class="band">Every cent in your wallet</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="money">
+      <div class="wrap">
+        <h2>How we make money, in plain words.</h2>
+        <p class="lead">From stakes on missed races, and from Grinda Pro. We'd rather you finish, so everything in the app is built to get you over the line. We publish our books live.</p>
+        <div class="ledger" id="books">
+          <div class="row"><span>Returned to walkers</span><span class="dots"></span><span class="v" data-k="returned">launching soon</span></div>
+          <div class="row"><span>Kept from missed races</span><span class="dots"></span><span class="v" data-k="kept">launching soon</span></div>
+          <div class="row"><span>Races finished</span><span class="dots"></span><span class="v" data-k="finished">launching soon</span></div>
+          <p class="note">Live from the Grinda database once the app launches. No sample numbers here, ever.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap">
+        <h2>Coming to the App Store.</h2>
+        <p class="lead">Free to download. Step tracking, streaks, weight trend and practice laps are free forever.</p>
+        <div class="shots">
+          <img src="screens/today.png" alt="Today: steps on a track" loading="lazy">
+          <img src="screens/contract.png" alt="The race deal in plain words" loading="lazy">
+          <img src="screens/wallet.png" alt="Wallet ledger" loading="lazy">
+          <img src="screens/progress.png" alt="Progress and weight trend" loading="lazy">
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© 2026 Grinda</span>
+      <span><a href="privacy.html">Privacy</a> · <a href="support.html">Support</a> · <a href="rules.html">Race rules</a></span>
+    </div>
+  </footer>
+
+  <script>
+    // Fill the public books from the live endpoint when configured. Real numbers only.
+    const API = document.documentElement.dataset.api;
+    if (API) {
+      fetch(`${API}/functions/v1/public-stats?currency=EUR`).then(r => r.ok ? r.json() : null).then(s => {
+        if (!s) return;
+        const eur = c => (c / 100).toLocaleString("en", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+        document.querySelector('[data-k="returned"]').textContent = eur(s.returned_cents);
+        document.querySelector('[data-k="kept"]').textContent = eur(s.kept_cents);
+        document.querySelector('[data-k="finished"]').textContent = s.races_finished.toLocaleString("en");
+      }).catch(() => {});
+    }
+  </script>
+</body>
+</html>
