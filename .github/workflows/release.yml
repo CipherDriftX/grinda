@@ -1,0 +1,65 @@
+name: Release to TestFlight / App Store
+
+# Run manually from the Actions tab. Requires these repository secrets:
+#   APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64
+#   GRINDA_SUPABASE_URL, GRINDA_SUPABASE_ANON_KEY, GRINDA_STRIPE_PUBLISHABLE_KEY
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "beta = TestFlight build, metadata = store listing + screenshots, release = submit for review"
+        required: true
+        default: beta
+        type: choice
+        options: [beta, metadata, release]
+
+jobs:
+  ship:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GRINDA_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+
+      - name: Install XcodeGen
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" https://github.com/yonaskolb/XcodeGen/releases/latest/download/xcodegen.zip
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Write app secrets
+        working-directory: ios
+        run: |
+          # "//" starts a comment in xcconfig files, so write https:/$()/host
+          ESC_URL=$(printf '%s' "${{ secrets.GRINDA_SUPABASE_URL }}" | sed 's#//#/$()/#')
+          cat > Config/Secrets.xcconfig <<EOF
+          GRINDA_SUPABASE_URL = ${ESC_URL}
+          GRINDA_SUPABASE_ANON_KEY = ${{ secrets.GRINDA_SUPABASE_ANON_KEY }}
+          GRINDA_STRIPE_PUBLISHABLE_KEY = ${{ secrets.GRINDA_STRIPE_PUBLISHABLE_KEY }}
+          EOF
+
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Install fastlane
+        working-directory: ios
+        run: bundle install --jobs 4
+
+      - name: Screenshots for the store listing
+        if: inputs.lane == 'metadata'
+        run: |
+          mkdir -p ios/fastlane/screenshots/en-US
+          cp screenshots/light/*.png ios/fastlane/screenshots/en-US/ 2>/dev/null || true
+
+      - name: Run lane
+        working-directory: ios
+        run: bundle exec fastlane ${{ inputs.lane }}
