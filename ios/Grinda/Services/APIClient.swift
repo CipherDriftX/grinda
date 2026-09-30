@@ -201,12 +201,17 @@ final class APIClient {
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         if code == 401 { throw APIError.unauthorized }
         guard (200..<300).contains(code) else {
-            struct Err: Decodable { let error: String?; let message: String?; let msg: String? }
-            let e = try? decoder.decode(Err.self, from: data)
+            let e = try? decoder.decode(ServerError.self, from: data)
             throw APIError.server(e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code)).")
         }
         return try decoder.decode(T.self, from: data)
     }
+}
+
+private struct ServerError: Decodable {
+    let error: String?
+    let message: String?
+    let msg: String?
 }
 
 /// Minimal Keychain wrapper for the auth session.
