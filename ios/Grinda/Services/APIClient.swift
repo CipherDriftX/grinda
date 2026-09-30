@@ -96,6 +96,7 @@ final class APIClient {
         let currency: String
         let timezone: String
         let startDate: String // yyyy-MM-dd, local
+        let birthYear: Int?
     }
 
     struct CreateStakeReply: Decodable {
@@ -155,7 +156,7 @@ final class APIClient {
     }
 
     func publicStats() async throws -> PublicStats {
-        try await get("functions/v1/public-stats", auth: false)
+        try await get("functions/v1/public-stats?currency=\(Money.localCurrency)", auth: false)
     }
 
     func deleteAccount() async throws {

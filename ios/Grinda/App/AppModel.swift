@@ -269,7 +269,8 @@ final class AppModel {
         if let stake, !isDemo {
             let reply = try await api.createStake(.init(
                 templateId: t.id, stakeCents: stake.cents, currency: stake.currency,
-                timezone: TimeZone.current.identifier, startDate: Self.dayFormatter.string(from: dates[0])
+                timezone: TimeZone.current.identifier, startDate: Self.dayFormatter.string(from: dates[0]),
+                birthYear: profile.birthYear
             ))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
