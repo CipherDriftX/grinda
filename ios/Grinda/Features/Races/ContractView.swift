@@ -11,7 +11,7 @@ struct ContractView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var stake: Int = 0
-    @State private var startToday = true
+    @State private var startToday = Calendar.current.component(.hour, from: .now) < 14
     @State private var pins = 0
     @State private var attempt = 0
     @State private var working = false
@@ -50,7 +50,13 @@ struct ContractView: View {
             Button("OK") { error = nil; rearm() }
         } message: { Text(error ?? "") }
         .sheet(isPresented: $showGate, onDismiss: rearm) { AccountGate() }
-        .overlay { if entered { EnteredOverlay(bib: 2_417) { dismiss(); model.tab = .today } } }
+        .fullScreenCover(isPresented: $entered) {
+            EnteredOverlay(bib: model.races.first?.bibNumber ?? 2_417) {
+                entered = false
+                dismiss()
+                model.tab = .today
+            }
+        }
     }
 
     // MARK: Sections
@@ -90,6 +96,12 @@ struct ContractView: View {
                 Text("Tomorrow").tag(false)
             }
             .pickerStyle(.segmented)
+            if startToday {
+                let left = max(24 - Calendar.current.component(.hour, from: .now), 0)
+                Text(left <= 10 ? "Today counts as day 1, and it ends in about \(left) hours. Tomorrow is the safer start." : "Today counts as day 1.")
+                    .font(.footnote)
+                    .foregroundStyle(left <= 10 ? Palette.risk : Palette.inkSecondary)
+            }
         }
     }
 
@@ -135,7 +147,16 @@ struct ContractView: View {
 
     private var commit: some View {
         VStack(spacing: 12) {
-            if working {
+            if case .alreadyRunning = model.canEnter(template) {
+                VStack(spacing: 10) {
+                    Text("You already have a staked race running. One at a time on the free plan, so you can give it everything.")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .multilineTextAlignment(.center)
+                    Button("Run up to 3 with Grinda Pro") { model.showingPaywall = true }
+                        .buttonStyle(.primary)
+                }
+            } else if working {
                 ProgressView().controlSize(.large).frame(height: 60)
             } else {
                 HoldToPinButton(title: isPractice ? "Hold to start" : "Hold to pin your bib", pins: $pins, autoplay: autoplay) {
@@ -166,7 +187,7 @@ struct ContractView: View {
         do {
             let ok = try await model.enter(template, stake: isPractice ? nil : stake, startingToday: startToday)
             if ok {
-                withAnimation(Motion.standard) { entered = true }
+                entered = true
             } else {
                 rearm()
             }

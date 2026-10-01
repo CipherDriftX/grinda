@@ -19,13 +19,19 @@ xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork 5g --wifiMo
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcrun simctl install "$UDID" "$APP"
 
+# Warm-up launch: the first cold start after install can take several seconds,
+# and a capture taken during it shows only the launch screen.
+xcrun simctl launch "$UDID" "$BUNDLE" -demo YES -screen today >/dev/null
+sleep 12
+xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
+
 for appearance in light dark; do
   xcrun simctl ui "$UDID" appearance "$appearance"
   mkdir -p "$OUT/$appearance"
   for screen in $SCREENS; do
     xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
     xcrun simctl launch "$UDID" "$BUNDLE" -demo YES -screen "$screen" >/dev/null
-    sleep "${SETTLE:-4}"
+    sleep "${SETTLE:-6}"
     xcrun simctl io "$UDID" screenshot --type=png "$OUT/$appearance/$screen.png" >/dev/null
     echo "captured $appearance/$screen"
   done

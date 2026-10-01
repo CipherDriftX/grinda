@@ -11,6 +11,16 @@ struct Milestone: Identifiable, Hashable {
     let kind: Kind
     let threshold: Double
 
+    /// What's struck on the medal face: the real number, in bib numerals.
+    var face: (big: String, small: String) {
+        switch kind {
+        case .km: return (threshold >= 1000 ? "1K" : String(Int(threshold.rounded(.down))), "KM")
+        case .streak: return (String(Int(threshold)), "DAYS")
+        case .races: return (String(Int(threshold)), threshold == 1 ? "RACE" : "RACES")
+        case .season: return ("OCT", "2026")
+        }
+    }
+
     static let all: [Milestone] = [
         .init(id: "km-21", title: "Half Marathon", detail: "Walk 21.1 km", symbol: "figure.walk", kind: .km, threshold: 21.1),
         .init(id: "km-42", title: "Marathon", detail: "Walk 42.2 km", symbol: "medal", kind: .km, threshold: 42.2),
@@ -60,9 +70,14 @@ struct MedalView: View {
             Circle()
                 .strokeBorder(earned ? Color.white.opacity(0.5) : Color.clear, lineWidth: 1)
                 .padding(size * 0.12)
-            Image(systemName: earned ? milestone.symbol : "lock.fill")
-                .font(.system(size: size * 0.36, weight: .bold))
-                .foregroundStyle(earned ? Color(hex: 0x7A3E00) : Palette.inkSecondary.opacity(0.6))
+            VStack(spacing: -size * 0.02) {
+                Text(milestone.face.big)
+                    .font(BrandFont.numerals(size * (milestone.face.big.count > 2 ? 0.3 : 0.38)))
+                Text(milestone.face.small)
+                    .font(BrandFont.label(size * 0.13))
+                    .kerning(0.5)
+            }
+            .foregroundStyle(earned ? Color(hex: 0x7A3E00) : Palette.inkSecondary.opacity(0.55))
         }
         .frame(width: size, height: size)
         .shadow(color: earned ? Color(hex: 0xF0A21E).opacity(0.35) : .clear, radius: 8, y: 4)

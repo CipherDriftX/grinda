@@ -142,6 +142,7 @@ final class AppModel {
             ledger = DemoSeed.ledger(races: seeded)
             publicStats = DemoSeed.stats
             healthConnected = true
+            isPro = true
         } else {
             profile = FileStore<Profile>(name: "profile").load() ?? Profile()
             races = FileStore<[Race]>(name: "races").load() ?? []
@@ -226,7 +227,22 @@ final class AppModel {
                 }
             }
         }
+        settlePracticeLaps()
         persist()
+    }
+
+    /// Practice laps have no money and no server side, so they settle on device
+    /// once their last day is over.
+    private func settlePracticeLaps() {
+        let today = Calendar.current.startOfDay(for: .now)
+        for i in races.indices where races[i].isPractice && races[i].status == .active {
+            guard let last = races[i].days.last, last.date < today else { continue }
+            let missed = races[i].days.filter { $0.state == .missed }.count
+            let won = missed <= races[i].graceAllowed
+            races[i].status = won ? .won : .lost
+            races[i].settledAt = .now
+            if won { celebrating = races[i] }
+        }
     }
 
     private func writeWidget() {

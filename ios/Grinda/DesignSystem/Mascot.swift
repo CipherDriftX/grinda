@@ -365,7 +365,7 @@ enum GrinCoach {
 
     static func line(_ c: Context, seed: Int) -> String {
         let left = max(c.goal - c.steps, 0)
-        let mins = Estimate.minutes(steps: left)
+        _ = Estimate.minutes(steps: left)
         let options: [String]
         if c.steps >= c.goal {
             options = [
@@ -383,16 +383,17 @@ enum GrinCoach {
                 "Morning! The track's empty. Let's own it.",
             ]
         } else if c.pacerSteps - c.steps > c.goal / 6 {
+            let gap = c.pacerSteps - c.steps
             options = [
-                "\(left.formatted()) to go. A \(mins)-minute walk does it.",
+                "We're \(gap.formatted()) behind the pacer. One lap around the block fixes it.",
                 c.stake.map { "\($0.formatted) says we walk tonight. I'll pace you." } ?? "Let's go for a lap. I'll pace you.",
                 "Take the long way home. Every step counts.",
             ]
         } else {
             options = [
-                "Right on pace. Keep that stride.",
-                "\(left.formatted()) to go. You've got this.",
-                "Nice rhythm. Phone calls count as walks, by the way.",
+                "Nice stride today. Keep it rolling.",
+                c.steps * 2 >= c.goal ? "Past halfway. The second half is the easy half." : "Nice rhythm. Phone calls count as walks, by the way.",
+                "Stairs count double in my book. Not in Apple's, though.",
             ]
         }
         return options[abs(seed) % options.count]

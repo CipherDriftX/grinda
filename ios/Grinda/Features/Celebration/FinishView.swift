@@ -143,13 +143,14 @@ private struct FinishTape: View {
             let half = geo.size.width / 2
             HStack(spacing: 0) {
                 tapeHalf(width: half)
-                    .rotationEffect(.degrees(broken ? -14 : 0), anchor: .leading)
-                    .offset(x: broken ? -half * 0.55 : 0, y: broken ? 26 : 0)
+                    .rotationEffect(.degrees(broken ? -38 : 0), anchor: .leading)
+                    .offset(x: broken ? -half * 0.35 : 0, y: broken ? 140 : 0)
                 tapeHalf(width: half)
-                    .rotationEffect(.degrees(broken ? 14 : 0), anchor: .trailing)
-                    .offset(x: broken ? half * 0.55 : 0, y: broken ? 26 : 0)
+                    .rotationEffect(.degrees(broken ? 38 : 0), anchor: .trailing)
+                    .offset(x: broken ? half * 0.35 : 0, y: broken ? 140 : 0)
             }
-            .opacity(broken ? 0.9 : 1)
+            .opacity(broken ? 0 : 1)
+            .animation(.easeIn(duration: 0.5).delay(0.15), value: broken)
         }
         .accessibilityHidden(true)
     }
