@@ -99,9 +99,11 @@ enum DemoSeed {
     /// Sample league table for demo mode only; the real app reads league_board().
     static func league(me: String, grit: Int) -> [APIClient.BoardRow] {
         let names = ["Lena", "Marco", "Aisha", "Jonas", "Priya", "Tom", "Sofia", "Ben", "Mia", "Kenji", "Clara", "Omar", "Elif", "Noah", "Hannah"]
-        let scores = [3_920, 3_610, 3_480, 3_115, 2_990, 2_870, 2_640, 2_410, 2_255, 2_010, 1_870, 1_540, 1_220, 980, 640]
-        var rows = zip(names, scores).map { (name: $0, grit: $1, me: false) }
-        rows.append((name: me, grit: max(grit, 2_930), me: true))
+        // Scaled around the demo walker's own Grit so the table always agrees with the header.
+        let base = Double(max(grit, 500))
+        let factors = [1.34, 1.23, 1.19, 1.06, 1.02, 0.98, 0.9, 0.82, 0.77, 0.69, 0.64, 0.53, 0.42, 0.33, 0.22]
+        var rows = zip(names, factors).map { (name: $0, grit: Int(base * $1), me: false) }
+        rows.append((name: me, grit: grit, me: true))
         rows.sort { $0.grit > $1.grit }
         return rows.enumerated().map { APIClient.BoardRow(rank: $0 + 1, name: $1.name, grit: $1.grit, isMe: $1.me) }
     }

@@ -125,9 +125,9 @@ struct TrackView: View {
                 // Dash, the pacer: a ghost of where a steady walker would be by now
                 if let pacer, !complete, pacer > 0.02 {
                     CharacterView(who: .dash, mood: .happy, running: runners)
-                        .frame(width: 34, height: 40)
-                        .opacity(0.55)
-                        .offset(y: -14)
+                        .frame(width: 46, height: 53)
+                        .opacity(0.8)
+                        .offset(y: -20)
                         .modifier(FollowTrack(progress: pacer, size: geo.size, inset: inset))
                         .accessibilityHidden(true)
                 }
@@ -161,9 +161,9 @@ private struct Runner: View {
         ZStack(alignment: .bottom) {
             if running { DustPuffs().frame(width: 44, height: 18).offset(x: -16, y: 2) }
             SteppieView(mood: complete ? .cheer : .focus, pose: complete ? .cheer : .run, mane: mane, shoes: shoes, running: running)
-                .frame(width: 46, height: 53)
+                .frame(width: 62, height: 71)
         }
-        .offset(y: -18)
+        .offset(y: -26)
         .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
     }
 }
