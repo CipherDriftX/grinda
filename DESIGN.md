@@ -1,6 +1,6 @@
 # Steppie design system
 
-The world: **a stadium track seen from above**. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Steppie/DesignSystem/`.
+The world: **a stadium track seen from above**, with a cast of characters running it. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Steppie/DesignSystem/`.
 
 ## Colour
 
@@ -59,6 +59,21 @@ Depth: paper on ground, `shadow(black 14%, radius 18, y 10)`. No zero-offset glo
 
 A coach on your side. Specific numbers ("4,120 to go · about 38 min"), plain money language ("held · never charged if you finish"), and never shaming. Money copy appears only where money moves.
 
-## Mascot: Steppie
+## Cast and motion
 
-Source of truth: `brand/mascot/tools/grin.py` (400 × 460 canvas), exported to `ios/Steppie/DesignSystem/MascotArt.swift`. `SteppieView(mood:pose:mane:hop:animated:)` renders layered Canvas parts: arms rotate about the shoulders, the head tilts about the neck, eyes blink about the eye line, and the tail sways about its base. Mascot colours (fur `#FFBE3D`, mane `#F0781E`) are used only on Steppie and medals. Brand cobalt and volt appear only on his band and bib. Idle motion stays near-invisible. Hops use keyframed squash and stretch. Confetti (`ConfettiBurst`) is for rare moments only. See `brand/mascot/MASCOT.md`.
+Source of truth: `brand/mascot/tools/steppie.py` and `cast.py` (400 × 460 canvas), exported to `ios/Steppie/DesignSystem/MascotArt.swift` as rigs. `CharacterView(who:mood:pose:mane:shoes:hop:running:animated:)` renders and animates any of the five: Steppie (lead), Dash (pacer), Shelly (Shields), Pip (messages), Bo (Vault). Steppie's shoe colourways come from `ShoeStyle` and recolour his trainer parts by id.
+
+Effects live in `Effects.swift`: `ConfettiBurst` (fluttering paper), `CoinRain` (money coming home), `SparkleField`, `RaysBackground`, `DustPuffs`, and the modifiers `.shimmer()`, `.pulseHalo()`, `.shake(_)`. Loud effects are rationed to rare moments (pinning, goal, finish, Shoe Box); everyday screens get sparkles and shimmer. Every effect is skipped under Reduce Motion.
+
+## Game components
+
+| Component | File | Notes |
+|---|---|---|
+| `StakeChip` | `ContractView.swift` | Poker chip per stake, coloured by table. Selected chip sits on a stack with a volt glow; locked tables show a padlock; the ladder's next rung wears "LEVEL UP". |
+| `TierBadge` | `ContractView.swift` | The table you're sitting at. |
+| `StatChip` | `TodayView.swift` | Streak, Shields and Grit on the field. |
+| `ShadowRaceCard` | `TodayView.swift` | Pip shows your last 7 days as if staked. Only when nothing is staked. |
+| `ComebackCard` | `TodayView.swift` | Real 72 h deadline, live countdown. |
+| `ShoeBoxSheet` | `Rewards/ShoeBoxView.swift` | Anticipation shakes, burst, reveal with rarity colour. |
+| `LeagueBadge` | `League/LeagueView.swift` | Crest in the league colour with the Stride S. |
+| `StrideMark` | `StrideMark.swift` | The live logo: the two halves stride in and snap together on the cut. |

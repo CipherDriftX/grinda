@@ -1,1 +1,1 @@
-walking,steps,step counter,pedometer,weight loss,challenge,accountability,commitment,habit,stake
+walking,steps,pedometer,weight loss,challenge,accountability,commitment,habit,stake,step goal,league

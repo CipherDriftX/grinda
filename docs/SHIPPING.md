@@ -14,13 +14,15 @@ To use a different bundle ID, change `bundleIdPrefix`, the `PRODUCT_BUNDLE_IDENT
 
 ## 2. App Store Connect (appstoreconnect.apple.com)
 
-1. **Apps › +**: iOS, name "Steppie: Walk It Off", primary language English (U.S.), bundle ID from above, SKU `steppie-ios`.
+1. **Apps › +**: iOS, name "Steppie: Step Challenges", primary language English (U.S.), bundle ID from above, SKU `steppie-ios`.
 2. **Subscriptions**: create group `steppie.pro` (the reference name must be "steppie.pro"; the app looks it up by group ID, so copy the **group ID** Apple generates into `StoreService.groupID`). Add:
    - `steppie.pro.monthly`: 1 month, suggested €7.99 / $7.99
    - `steppie.pro.yearly`: 1 year, suggested €49.99 / $49.99, 1-week free trial
-3. **App Privacy**: Health & Fitness (steps, weight): App Functionality, linked to the user, not used for tracking. Purchases: App Functionality. Contact info (name via Sign in with Apple): App Functionality. **No tracking.**
-4. **Users and Access › Integrations › App Store Connect API › +**: role **App Manager**. Download the `.p8` once, and note the Key ID and Issuer ID.
-5. Age rating: 17+ is not required (no gambling: there's no prize and no chance element). Answer "Contests: None" and "Simulated gambling: None". Staking is limited to 18+ inside the app.
+3. **In-App Purchases › Consumable**: `steppie.shield.1` (1 Shield, €1.99 / $1.99) and `steppie.shield.3` (3 Shields, €4.99 / $4.99). Display names "1 Shield" and "3 Shields". Review note: a Shield is a digital item that covers one missed day in a race; it doesn't change the stake.
+4. **Users and Access › Integrations › In-App Purchase › +**: generate a key for the App Store Server API. Put the Key ID, Issuer ID and the `.p8` contents into the Supabase secrets `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPSTORE_PRIVATE_KEY` (used by `grant-shields`).
+5. **App Privacy**: Health & Fitness (steps, weight): App Functionality, linked to the user, not used for tracking. Purchases: App Functionality. Contact info (name via Sign in with Apple): App Functionality. **No tracking.**
+6. **Users and Access › Integrations › App Store Connect API › +**: role **App Manager**. Download the `.p8` once, and note the Key ID and Issuer ID.
+7. Age rating: 17+ is not required (no gambling: there's no prize and no chance element). Answer "Contests: None" and "Simulated gambling: None". Shoe Boxes are cosmetic, earned by finishing and never sold, so they aren't paid random items. Staking is limited to 18+ inside the app.
 
 ## 3. Supabase (supabase.com)
 

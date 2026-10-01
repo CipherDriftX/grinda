@@ -19,7 +19,6 @@ struct PaywallView: View {
                     .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(.white)
                 VStack(alignment: .leading, spacing: 14) {
-                    ProLine(symbol: "shield.lefthalf.filled", text: "2 Shields in your locker every month")
                     ProLine(symbol: "slider.horizontal.3", text: "Build your own races: any goal, any length")
                     ProLine(symbol: "square.stack.3d.up", text: "Run up to 3 races at once")
                     ProLine(symbol: "person.2", text: "Race friends, each on your own stake")

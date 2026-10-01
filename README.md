@@ -1,92 +1,92 @@
-<p align="center"><img src="brand/mascot/renders/x-header.png" alt="Steppie: Money on the line. Lion at your side."></p>
+<p align="center"><img src="brand/mascot/renders/x-header.png" alt="Steppie: Back yourself. Keep your money."></p>
 
 <h3 align="center">Back yourself. Keep your money.</h3>
 
-Steppie is an iPhone app that turns a daily walking goal into a commitment backed by your own money. You pin a race bib, stake an amount, and walk. When you finish, every cent comes back. Short races are only a **hold** on your card, so nothing is ever charged if you finish. If you miss, the stake is kept.
+Steppie is an iPhone app that turns a daily walking goal into a commitment backed by your own money. Pick a race, pin your bib, put down a stake and walk. When you finish, every cent comes back. Short races are only a **hold** on your card, so nothing is ever charged if you finish. If you miss, the stake is kept.
 
-It's built to help people lose weight by walking. The stake is the mechanism. **Steppie**, the Steppie lion, keeps you company.
+**Steppie** is a lion in running shoes who runs your laps with you. The crew around him each own one part of the game.
+
+<p align="center"><img src="brand/mascot/renders/cast-character-sheet.png" alt="Steppie and the crew"></p>
+
+| | Who | Job in the app |
+|---|---|---|
+| 🦁 | **Steppie** | Runs your laps on the Today track, coaches you, grows his mane with your goal days, wears the trainers you earn. |
+| 🐆 | **Dash** | The pacer: a ghost on your track showing where a steady walker would be by now. Hosts the weekly league. |
+| 🐢 | **Shelly** | Keeper of Shields. Each Shield covers one missed day; unused ones come back. |
+| 🐦 | **Pip** | Brings the news: race invites before you've staked, and your shadow week. |
+| 🐻 | **Bo** | Guards the Vault: every hold, charge, release and refund. |
 
 ## The app
 
 <p align="center">
   <img src="screenshots/light/onboarding-welcome.png" width="200">
   <img src="screenshots/light/today.png" width="200">
-  <img src="screenshots/light/pinning.png" width="200">
+  <img src="screenshots/light/contract.png" width="200">
   <img src="screenshots/light/entered.png" width="200">
 </p>
 <p align="center">
   <img src="screenshots/light/finish.png" width="200">
-  <img src="screenshots/light/milestone.png" width="200">
-  <img src="screenshots/light/progress.png" width="200">
-  <img src="screenshots/light/wallet.png" width="200">
+  <img src="screenshots/light/shoebox-open.png" width="200">
+  <img src="screenshots/light/league.png" width="200">
+  <img src="screenshots/light/shields.png" width="200">
 </p>
 <p align="center">
+  <img src="screenshots/light/today-new.png" width="200">
+  <img src="screenshots/light/comeback.png" width="200">
   <img src="screenshots/light/races.png" width="200">
-  <img src="screenshots/light/contract.png" width="200">
-  <img src="screenshots/light/onboarding-baseline.png" width="200">
-  <img src="screenshots/dark/today.png" width="200">
+  <img src="screenshots/light/wallet.png" width="200">
 </p>
 
 <p align="center"><img src="screenshots/pinning.gif" width="260" alt="Hold to pin your bib"><br><em>The signature interaction: hold to pin your bib.</em></p>
 
-These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode on every push. The data is synthetic. Dark mode versions are in [`screenshots/dark`](screenshots/dark).
+These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode. The data is synthetic. Dark mode versions are in [`screenshots/dark`](screenshots/dark).
 
 ### App Store screenshots
 
 <p align="center">
-  <img src="ios/fastlane/screenshots/en-US/01_today.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/02_pinning.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/03_finish.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/04_wallet.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/05_progress.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/06_races.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/01_today.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/02_contract.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/03_entered.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/04_finish.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/05_comeback.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/06_league.png" width="130">
 </p>
 
-## Meet Steppie
+## How it makes money
 
-<p align="center"><img src="brand/mascot/renders/grin-character-sheet.png" alt="Steppie character sheet"></p>
+From stakes on missed races, Shields and Steppie Pro. The business grows by getting more people to back themselves, with bigger stakes, more often. It never works by making people fail. The playbook, with the research behind every lever and the unit economics, is in [`docs/STRATEGY.md`](docs/STRATEGY.md).
 
-Steppie is a vector character built in code (`brand/mascot/tools/grin.py`). The same geometry renders the marketing art and animates natively in SwiftUI.
-- **Moods:** happy, calm, cheer, roar, worried, sleep, wink, proud.
-- **Poses:** idle, cheer, wave, hold, flex.
-- **The mane grows with you:** Cub → Young lion → Lion → King of the track, based on your goal days in the last 14. It never resets overnight.
-- **Where he appears:** Today (coach lines, tap him for a reaction), onboarding, the hold-to-pin flow, the finish, medals, empty states, the paywall, share cards, the widget, and notifications.
-- **Motion:** idle motion is near-invisible because people see it many times a day. Celebrations get squash-and-stretch hops, confetti, and haptics. Reduce Motion is respected everywhere.
-
-The engagement system (evolving mascot, medals, the Walktober campaign, Steppie-voiced nudges) is documented with its research in [`brand/mascot/MASCOT.md`](brand/mascot/MASCOT.md).
-
-<p align="center">
-  <img src="brand/mascot/renders/post-mane-goal.png" width="180">
-  <img src="brand/mascot/renders/post-keep-your-money.png" width="180">
-  <img src="brand/mascot/renders/post-hold-it.png" width="180">
-  <img src="brand/mascot/renders/post-grow-your-mane.png" width="180">
-  <img src="brand/mascot/renders/post-walktober.png" width="180">
-</p>
-
-## What's in the box
-
-| | |
+| Lever | What it is |
 |---|---|
-| **Today** | Your steps as laps on a stadium track with a ghost pacer, plus Steppie with a line about your actual day. |
-| **Races** | 5-Day Sprint, 10K Week, Weekend Warrior, 30-Day Reset, and a free Practice Lap. Each race is a numbered bib. |
-| **Commit** | The whole deal in plain words, then **hold to pin your bib**: four pins, four haptic taps, then Apple Pay via Stripe. |
-| **Progress** | Steppie's mane, distance as a journey, the trophy case (13 medals), the weight trend, and a punch card. |
-| **Wallet** | A passbook of every hold, charge, release, and refund with its Stripe reference, plus Steppie's public books. |
-| **Finish** | The tape breaks, Steppie cheers, confetti, and your stake counts back up. Share card for X and Discord. |
-| **Also** | Widgets with Steppie, the evening pace nudge (max one), Steppie Pro (StoreKit 2, with a Steppie app icon), account deletion, and an EN/DE listing. |
+| **Starter Kit** | Onboarding ends with the first pin already in your bib and a free Shield (endowed progress). |
+| **Shadow week** | Before you stake, Pip shows your real last 7 days as if money had been on them. |
+| **Race invites** | Opt-in, before a stake only: fresh starts, comebacks, Shields waiting. Quiet once money is down: one pace check if you're behind. |
+| **Stake tables** | Rookie €5 to Legend €100. Bigger stake, more Grit. Top tables open after finished races. |
+| **Stake ladder** | Finish, and the next race suggests one rung up. Miss, and it suggests the same. |
+| **Weekly leagues** | Grit from race days. Top 7 move up every Sunday. |
+| **Shields** | €1.99 (3 for €4.99). Up to 2 per race. Unused ones come back. |
+| **Comeback** | Within 72 h of a miss: finish a 5-day Comeback and get half the missed stake back. Once per miss. |
+| **Shoe Boxes** | Every finish: a random pair of trainers for Steppie. Cosmetic, odds by race length, never sold. |
+
+Whether money comes back depends only on steps. There's no chance element anywhere near money, which is what keeps Steppie a commitment contract, not a bet.
+
+## Brand
+
+<p align="center"><img src="brand/logo/lockup-on-cobalt.png" width="520" alt="Steppie lockup"></p>
+
+The **Stride S**: an S cut in two by a forward stride, every cut on the same 58° angle. One colour, works at 16 px, generated from geometry (`brand/tools/stride.py`). Full guide: [`brand/BRAND.md`](brand/BRAND.md).
 
 ## Repo map
 
 - `ios/`: SwiftUI app (iOS 17+), widget, and fastlane. The project is generated by XcodeGen (`cd ios && xcodegen generate`).
-- `supabase/`: Postgres schema with RLS, plus Edge Functions: `create-stake`, `stripe-webhook`, `submit-steps`, `settle` (cron), `public-stats`, `delete-account`.
-- `brand/`: name, G-Track symbol, wordmark, icons, fonts, and the **Steppie mascot** (`brand/mascot/`: source, renders, bible).
-- `marketing/`: the weekly stats post for X and Discord (live numbers only) and the App Store frame generator.
-- `site/`: landing page, privacy, support, and race rules, at https://cipherdriftx.github.io/steppie/
-- `docs/`: research, strategy, the prompt audit, and the **shipping guide**.
-- `PRODUCT.md` and `DESIGN.md`: the product record and the design system.
+- `supabase/`: Postgres schema with RLS, plus Edge Functions: `create-stake`, `stripe-webhook`, `submit-steps`, `settle` (cron), `grant-shields`, `public-stats`, `delete-account`. Leagues are SQL (`league_board()`, `roll_leagues()`).
+- `brand/`: the Stride S, wordmark, icons, Steppie fonts, and the cast (`brand/mascot/`: geometry source, renders, bible).
+- `marketing/`: weekly stats post for X and Discord (live numbers only) and the App Store frame generator.
+- `site/`: landing page, privacy, support and race rules.
+- `docs/`: strategy and money playbook, research, the prompt audit, and the shipping guide.
 
 ## Run it
 
-- **On a Mac:** `brew install xcodegen && cd ios && xcodegen generate && open Steppie.xcodeproj`. Add the launch arguments `-demo YES` to see it with sample data.
+- **On a Mac:** `brew install xcodegen && cd ios && xcodegen generate && open Steppie.xcodeproj`. Add the launch arguments `-demo YES` to see it with sample data, and `-screen <name>` to jump to a scene (see `DemoRouter` in `SteppieApp.swift`).
 - **CI:** every push to `ios/` builds on a macOS runner and captures screenshots.
-- **Ship:** follow [`docs/SHIPPING.md`](docs/SHIPPING.md) (Apple, Stripe, Supabase, and GitHub secrets), then run the **Release** workflow.
+- **Ship:** follow [`docs/SHIPPING.md`](docs/SHIPPING.md) (Apple, Stripe, Supabase, App Store Server API and GitHub secrets), then run the **Release** workflow.

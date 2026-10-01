@@ -10,8 +10,14 @@ Races of 5 days or fewer only place a hold on your card. Finish, and the hold is
 MONEY BACK IN MINUTES
 Longer races are refunded in full, automatically, within minutes of settling. No withdrawal limits, no waiting days.
 
+MEET THE CREW
+Steppie is a lion in running shoes who runs your laps on the track. Dash the cheetah paces you all day. Shelly the tortoise keeps your Shields. Pip the sparrow brings the news. Bo the bear guards the Vault.
+
+MAKE IT A GAME
+Pick a stake table from Rookie to Legend: bigger stakes earn more Grit in the weekly league. Equip up to two Shields to cover a bad day; unused ones come back. Missed a race? One Comeback within 72 hours wins back half. Every finish opens a Shoe Box with new trainers for Steppie. Whether your money comes back depends only on your steps.
+
 EVERY CENT IN VIEW
-Your Wallet shows every hold, charge, release and refund with its Stripe reference. We publish our own books too: how much we've returned and how much we've kept.
+The Vault shows every hold, charge, release and refund with its Stripe reference. We publish our own books too: how much we've returned and how much we've kept.
 
 BUILT AROUND YOUR BODY
 Tell Steppie where you're starting and where you want to be. Your goal comes from your real step average, not a random 10,000. See steps turn into kilometres, calories and fat walked off.
@@ -23,9 +29,9 @@ FREE, AND ACTUALLY USEFUL
 Step track, streaks, weight trend, practice laps, widgets and share cards are free forever.
 
 STEPPIE PRO
-Grace tokens, custom races, up to three races at once, friend races and deeper insights.
+Custom races, up to three races at once, friend races, deeper insights and the Stride S app icon.
 
 HOW WE MAKE MONEY
-From stakes on missed races, and from Steppie Pro. We'd rather you finish, so everything in the app is built to get you over the line.
+From stakes on missed races, Shields and Steppie Pro. We'd rather you finish, so everything in the app is built to get you over the line.
 
 Staked races are for adults 18+. Steppie is a motivation tool, not medical advice. Calorie and fat figures are estimates.
