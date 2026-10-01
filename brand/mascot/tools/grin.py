@@ -330,3 +330,17 @@ def group(mood="happy", pose="idle", mane=2, tx=0, ty=0, scale=1.0, head_tilt=0)
 if __name__ == "__main__":
     import sys
     open(sys.argv[1] if len(sys.argv) > 1 else "grin.svg", "w").write(svg())
+
+
+def _el(p):
+    if "stroke" in p:
+        return (f'<path d="{p["d"]}" fill="none" stroke="{p["stroke"]}" stroke-width="{p["width"]}" '
+                f'stroke-linecap="round" stroke-linejoin="round"' + (f' opacity="{p["opacity"]}"' if "opacity" in p else "") + "/>")
+    return f'<path d="{p["d"]}" fill="{p["fill"]}"' + (f' opacity="{p["opacity"]}"' if "opacity" in p else "") + "/>"
+
+
+def head_group(mood="happy", mane=2, tx=0, ty=0, scale=1.0):
+    """Head only (mane, face, expression): app icon, emoji, avatars."""
+    ps = [p for p in parts(mood, "idle", mane) if p["group"] in ("head", "eyeL", "eyeR", "eyes", "brows", "mouth")]
+    ps = [p for p in ps if p["group"] == "head"] + [p for p in ps if p["group"] != "head"]
+    return f'<g transform="translate({tx} {ty}) scale({scale})">{"".join(_el(p) for p in ps)}</g>'
