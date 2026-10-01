@@ -1,4 +1,4 @@
-# Prompt audit: the original Grinda brief
+# Prompt audit: the original Steppie brief
 
 Scope: the owner's initial build request (one message). Method: static analysis with the `prompt-audit` skill (five dimensions). No behavioural evaluation. Assumptions: "stack based" means "stake based"; "Steppa: Schritte-Challenges" is the iOS app id6755126064.
 
@@ -42,7 +42,7 @@ Overall coverage: **Limited**. Vision is clear; operational and legal edges are 
 - **Apple payments policy.** Real-money stakes are not a digital good (guideline 3.1.1). Commitment apps with Stripe pre-auth (e.g. Forfeit) are live on the App Store. Stakes go through Stripe; the Pro subscription goes through StoreKit.
 - **Gambling law.** A prize pool funded by losers is a contest. The owner chose "we keep forfeits": a commitment contract with no chance element and no prize. Legal review per market is still required (DE: consumer-law limits on contractual penalties, BGB §309 Nr. 6 / §343).
 - **Cheating.** Steppa reviewers complain about "20k steps within hours". Mitigation: user-entered samples are ignored, cadence plausibility checks, and App Attest.
-- **Settlement delays.** Steppa's top complaint is 1 to 2 days to settle. Grinda settles 3 hours after the day closes and releases holds instantly.
+- **Settlement delays.** Steppa's top complaint is 1 to 2 days to settle. Steppie settles 3 hours after the day closes and releases holds instantly.
 - **Health claims.** No medical claims. Show a disclaimer, and estimate kcal with a transparent formula.
 - **Minors.** Staking requires age 18+.
 - **Account deletion** (App Store 5.1.1(v)): included in-app.

@@ -1,6 +1,6 @@
 Lauf es weg. Behalte dein Geld.
 
-Grinda macht aus deinem täglichen Schrittziel ein Versprechen mit echtem Einsatz. Wähle ein Rennen, zum Beispiel 8.000 Schritte am Tag für 5 Tage, und setze einen Betrag. Schaffst du es, bekommst du jeden Cent zurück.
+Steppie macht aus deinem täglichen Schrittziel ein Versprechen mit echtem Einsatz. Wähle ein Rennen, zum Beispiel 8.000 Schritte am Tag für 5 Tage, und setze einen Betrag. Schaffst du es, bekommst du jeden Cent zurück.
 
 NUR RESERVIERT, NICHT ABGEBUCHT
 Bei Rennen bis 5 Tage wird dein Betrag nur auf der Karte reserviert. Schaffst du es, wird die Reservierung aufgehoben. Es wird nie etwas abgebucht.
@@ -12,6 +12,6 @@ JEDER CENT SICHTBAR
 Dein Wallet zeigt jede Reservierung, Zahlung, Freigabe und Erstattung mit Stripe-Referenz.
 
 FUNKTIONIERT MIT DEINEM TRACKER
-Grinda liest Schritte aus Apple Health: iPhone, Apple Watch, Garmin, Fitbit, Oura, Withings und Samsung zählen. Manuell eingetragene Schritte zählen nicht.
+Steppie liest Schritte aus Apple Health: iPhone, Apple Watch, Garmin, Fitbit, Oura, Withings und Samsung zählen. Manuell eingetragene Schritte zählen nicht.
 
-Rennen mit Einsatz ab 18 Jahren. Grinda ist kein medizinischer Rat.
+Rennen mit Einsatz ab 18 Jahren. Steppie ist kein medizinischer Rat.

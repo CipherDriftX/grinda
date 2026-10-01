@@ -1,10 +1,10 @@
-// Builds the weekly "Grinda in numbers" post for X and Discord from the live
+// Builds the weekly "Steppie in numbers" post for X and Discord from the live
 // public-stats endpoint. Real numbers only: if the endpoint fails, nothing is posted.
 //
 //   deno run --allow-net --allow-env marketing/weekly-stats.ts            # print X thread
 //   DISCORD_WEBHOOK_URL=... deno run --allow-net --allow-env marketing/weekly-stats.ts --discord
 //
-// Env: GRINDA_API (https://<project>.supabase.co), GRINDA_ANON_KEY
+// Env: STEPPIE_API (https://<project>.supabase.co), STEPPIE_ANON_KEY
 
 type Stats = {
   walkers: number;
@@ -18,10 +18,10 @@ type Stats = {
   weight_lost_kg_opt_in: number;
 };
 
-const api = Deno.env.get("GRINDA_API");
-const key = Deno.env.get("GRINDA_ANON_KEY");
+const api = Deno.env.get("STEPPIE_API");
+const key = Deno.env.get("STEPPIE_ANON_KEY");
 if (!api || !key) {
-  console.error("Set GRINDA_API and GRINDA_ANON_KEY.");
+  console.error("Set STEPPIE_API and STEPPIE_ANON_KEY.");
   Deno.exit(1);
 }
 
@@ -42,7 +42,7 @@ const returned = [eur.returned_cents > 0 ? money(eur.returned_cents, "EUR") : nu
   usd.returned_cents > 0 ? money(usd.returned_cents, "USD") : null].filter(Boolean).join(" + ") || "0";
 
 const lines = [
-  `Grinda, so far:`,
+  `Steppie, so far:`,
   ``,
   `🚶 ${n(eur.walkers)} people have raced`,
   `👣 ${n(eur.steps_walked)} steps`,
@@ -51,7 +51,7 @@ const lines = [
   `💸 ${returned} returned to walkers`,
   eur.weight_lost_kg_opt_in > 0 ? `⚖️ ${n(eur.weight_lost_kg_opt_in)} kg lost (self-reported, opt-in)` : null,
   ``,
-  `Money on the line, back when you finish. #WalkItOff`,
+  `Money on the line, back when you finish. #BackYourself`,
 ].filter((l) => l !== null).join("\n");
 
 const thread = [
@@ -66,7 +66,7 @@ if (Deno.args.includes("--discord")) {
   const res = await fetch(hook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: "Grinda", content: thread.join("\n\n") }),
+    body: JSON.stringify({ username: "Steppie", content: thread.join("\n\n") }),
   });
   console.log(res.ok ? "Posted to Discord." : `Discord error ${res.status}`);
 } else {

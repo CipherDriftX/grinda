@@ -16,13 +16,13 @@ Adults (18+) who want to lose weight and have tried and quit before. They know w
 
 ## Product Purpose
 
-Grinda turns a daily walking goal into a commitment backed by the user's own money. The user stakes an amount on a challenge (e.g. 10,000 steps a day for 7 days). If they finish, they get every cent back. If they miss, Grinda keeps the stake. The purpose is weight loss through walking; the stake is the mechanism that makes people actually do it. Success means users hit their goal and lose weight, and tell others.
+Steppie turns a daily walking goal into a commitment backed by the user's own money. The user stakes an amount on a challenge (e.g. 10,000 steps a day for 7 days). If they finish, they get every cent back. If they miss, Steppie keeps the stake. The purpose is weight loss through walking; the stake is the mechanism that makes people actually do it. Success means users hit their goal and lose weight, and tell others.
 
 ## Positioning
 
 - **Your money never leaves if you walk.** For challenges up to 6 days the card is only authorized (a hold), never charged; the hold is released the moment the challenge settles. Longer challenges are charged and refunded in full, automatically, within minutes of settlement.
 - **Commitment contract, not a lottery.** No prize pool, no chance element. You compete only against your past self.
-- **Honest about how it makes money.** Grinda earns from missed stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger.
+- **Honest about how it makes money.** Steppie earns from missed stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger.
 - **Built around the body, not the bet.** Goals are set from the user's weight goal and current baseline, not from what maximises revenue.
 
 ## Operating Context
@@ -36,14 +36,14 @@ Grinda turns a daily walking goal into a commitment backed by the user's own mon
 
 - Free forever: step tracking, daily goal ring, streaks, weight log, practice challenges (no money), weekly recap, share cards.
 - Staked challenges: the core paid mechanic. Stakes from 5 to 500 in the local currency. One free "grace day" per challenge of 7+ days.
-- Grinda Pro (StoreKit subscription): extra grace tokens, custom challenge builder, advanced insights, multiple concurrent challenges, friend challenges.
+- Steppie Pro (StoreKit subscription): extra grace tokens, custom challenge builder, advanced insights, multiple concurrent challenges, friend challenges.
 - Anti-cheat: ignore manually entered HealthKit samples (`HKMetadataKeyWasUserEntered`), prefer watch/phone motion sources, flag physiologically implausible cadence (> 250 steps/min sustained), device attestation (App Attest) on step submissions.
 - App Store: account deletion in-app, Sign in with Apple, HealthKit purpose strings, no HealthKit data used for advertising, 18+ age gate for staking.
 - Undecided: legal review per country for commitment contracts (consumer-law "penalty clause" rules in DE), charity option for forfeits, friend/team pools.
 
 ## Brand Commitments
 
-- Name: **Grinda** (the repo name, confirmed by the owner).
+- Name: **Steppie** (the repo name, confirmed by the owner).
 - Voice: warm, direct, and on your side, like a coach who believes in you, not a casino host. Never shames. Celebrates effort.
 
 ## Evidence on Hand

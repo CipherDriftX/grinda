@@ -1,4 +1,4 @@
-// Shared helpers for Grinda Edge Functions.
+// Shared helpers for Steppie Edge Functions.
 import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@17";
 
@@ -68,6 +68,9 @@ export const TEMPLATES: Record<string, Template> = {
   "weekend": { id: "weekend", name: "Weekend Warrior", dailyGoal: 12000, days: 8, graceDays: 1, schedule: "weekends", staked: true },
   "reset-30": { id: "reset-30", name: "30-Day Reset", dailyGoal: 8000, days: 30, graceDays: 2, schedule: "consecutive", staked: true },
 };
+
+/** Comebacks: five days at the missed race's goal (the goal is filled in per race). */
+export const COMEBACK: Template = { id: "comeback", name: "Comeback", dailyGoal: 0, days: 5, graceDays: 0, schedule: "consecutive", staked: true };
 
 /** Holds (manual capture) only when the race settles well inside Stripe's 7-day authorisation window. */
 export function usesHold(t: Template): boolean {

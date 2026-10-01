@@ -69,7 +69,8 @@ Deno.serve(handler(async (req) => {
       const piId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
       if (!piId) break;
       const { data: race } = await db.from("races").select("*").eq("stripe_payment_intent", piId).maybeSingle();
-      if (race) await ledger(race, "refunded", charge.amount_refunded, piId);
+      // A refund on a missed race is a comeback refund; settle() books it on the comeback race.
+      if (race && race.status !== "lost") await ledger(race, "refunded", charge.amount_refunded, piId);
       break;
     }
   }

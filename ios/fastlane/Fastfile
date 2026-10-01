@@ -1,4 +1,4 @@
-# Grinda release lanes. Authentication uses an App Store Connect API key
+# Steppie release lanes. Authentication uses an App Store Connect API key
 # (no Apple ID password, no 2FA prompts), so they run unattended in CI.
 #
 # Env: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64, APPLE_TEAM_ID
@@ -26,10 +26,10 @@ platform :ios do
   lane :beta do
     api_key = asc_key
     latest = latest_testflight_build_number(api_key: api_key, initial_build_number: 0)
-    increment_build_number(xcodeproj: "Grinda.xcodeproj", build_number: latest + 1)
+    increment_build_number(xcodeproj: "Steppie.xcodeproj", build_number: latest + 1)
     build_app(
-      project: "Grinda.xcodeproj",
-      scheme: "Grinda",
+      project: "Steppie.xcodeproj",
+      scheme: "Steppie",
       configuration: "Release",
       export_method: "app-store",
       output_directory: "build/release",

@@ -1,13 +1,13 @@
-# Grinda: product and business strategy
+# Steppie: product and business strategy
 
-> Walk it off. Keep your money.
+> Back yourself. Keep your money.
 
 ## 1. First principles
 
 1. People who want to lose weight already know walking works. **The problem is follow-through, not information.**
 2. Loss aversion is the strongest cheap motivator we have. A stake of your own money roughly doubles the felt cost of skipping.
 3. A money app lives or dies on trust. **One surprise charge ends the relationship.**
-4. Revenue from misses creates a perverse incentive (the company profits when users fail). Grinda neutralises it by designing every surface to increase completion, publishing the refunded-vs-kept ratio, and building a second revenue line (Pro) that grows when users succeed.
+4. Revenue from misses creates a perverse incentive (the company profits when users fail). Steppie neutralises it by designing every surface to increase completion, publishing the refunded-vs-kept ratio, and building a second revenue line (Pro) that grows when users succeed.
 
 ## 2. The core loop
 
@@ -19,7 +19,7 @@ Set goal from your body  →  Stake (hold, not charge)  →  Walk (ring, nudges,
 
 ## 3. Free vs. paid
 
-| Free forever (the bait that genuinely helps) | Staked challenges (the core) | Grinda Pro (subscription, StoreKit) |
+| Free forever (the bait that genuinely helps) | Staked challenges (the core) | Steppie Pro (subscription, StoreKit) |
 |---|---|---|
 | Step ring, daily goal from baseline | Stake 5–500 EUR/USD | 3 grace tokens / month |
 | Streaks + streak calendar | Hold for ≤5-day challenges, charge + instant refund for longer | Custom challenge builder (any days, any goal) |
@@ -67,8 +67,8 @@ Assume average stake €20 and 73% completion (StepBet benchmark):
 
 ## 8. Growth engine: X and Discord
 
-- **Share cards** (1080×1350, generated in-app): "Day 7/7 ✓ · 74,210 steps · €20 back", in the brand style. The share sheet posts to X with #WalkItOff.
-- **Public stats, weekly**: an X thread template built from the `public_stats` view: "This week Grinda users walked 1.2M km, completed 8,410 challenges, got €71,304 back." **Only real numbers.** An Edge Function `public-stats` exposes JSON for a bot/website.
+- **Share cards** (1080×1350, generated in-app): "Day 7/7 ✓ · 74,210 steps · €20 back", in the brand style. The share sheet posts to X with #BackYourself.
+- **Public stats, weekly**: an X thread template built from the `public_stats` view: "This week Steppie users walked 1.2M km, completed 8,410 challenges, got €71,304 back." **Only real numbers.** An Edge Function `public-stats` exposes JSON for a bot/website.
 - **Discord**: a community server with a #proof channel (share cards), weekly community challenges, and a bot that posts the public stats.
 - **Referral**: invite a friend, and when they finish their first staked challenge you both get a free grace token (no money, so no regulatory issue).
 
@@ -78,12 +78,12 @@ Assume average stake €20 and 73% completion (StepBet benchmark):
 2. v1.1: friend challenges, Live Activities for the final hour, Garmin/Fitbit direct.
 3. v2: new challenge types (distance, active minutes, workouts, weight milestones), charity forfeit option, Android.
 
-## 10. Grin and the engagement layer (added 2026-10-01)
+## 10. Steppie and the engagement layer (added 2026-10-01)
 
-Grin, the Grinda lion, carries the habit loop without changing the product:
-- **Trigger:** Grin-voiced evening nudge, at most one, only when behind.
-- **Action:** Today opens to Grin saying something specific about your day.
+Steppie, the Steppie lion, carries the habit loop without changing the product:
+- **Trigger:** Steppie-voiced evening nudge, at most one, only when behind.
+- **Action:** Today opens to Steppie saying something specific about your day.
 - **Variable reward:** rotating coach lines, tap reactions, medal moments, confetti.
 - **Investment:** a mane that grows with goal days in the last 14, Finch-style.
 
-Plus the **trophy case** (13 medals), the **Walktober 2026** launch campaign (a cosmetic medal, no money involved), a **Grin app icon** for Pro, and a Discord emoji pack. Full rationale and research: [`brand/mascot/MASCOT.md`](../brand/mascot/MASCOT.md).
+Plus the **trophy case** (13 medals), the **Walktober 2026** launch campaign (a cosmetic medal, no money involved), a **Steppie app icon** for Pro, and a Discord emoji pack. Full rationale and research: [`brand/mascot/MASCOT.md`](../brand/mascot/MASCOT.md).

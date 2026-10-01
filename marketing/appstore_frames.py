@@ -1,5 +1,5 @@
 """Composes App Store marketing screenshots (1320 x 2868, the 6.9" class):
-headline + real Simulator capture + Grin. Output: ios/fastlane/screenshots/en-US/.
+headline + real Simulator capture + Steppie. Output: ios/fastlane/screenshots/en-US/.
 
     python3 marketing/appstore_frames.py
 """
@@ -16,7 +16,7 @@ W, H = 1320, 2868
 COBALT, VOLT = "#1F4FD8", "#C8F03C"
 
 FRAMES = [
-    # file, line 1, line 2 (volt), grin mood (None when Grin is already on screen), pose, mane, side
+    # file, line 1, line 2 (volt), grin mood (None when Steppie is already on screen), pose, mane, side
     ("today", "YOUR STEPS.", "ON A TRACK.", None, None, 2, "left"),
     ("pinning", "PUT MONEY", "ON YOUR WALK.", None, None, 2, "right"),
     ("finish", "FINISH.", "GET IT ALL BACK.", None, None, 3, "left"),
@@ -27,7 +27,7 @@ FRAMES = [
 
 
 def text(x, y, s, size, fill):
-    return (f'<text x="{x}" y="{y}" font-family="Grinda Bib" font-weight="900" font-size="{size}" '
+    return (f'<text x="{x}" y="{y}" font-family="Steppie Bib" font-weight="900" font-size="{size}" '
             f'fill="{fill}" text-anchor="middle">{s}</text>')
 
 

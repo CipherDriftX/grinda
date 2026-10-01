@@ -1,4 +1,4 @@
-"""Renders Grin marketing assets into brand/mascot/renders/.  python3 render_assets.py"""
+"""Renders Steppie marketing assets into brand/mascot/renders/.  python3 render_assets.py"""
 import os, subprocess
 import grin
 
@@ -15,7 +15,7 @@ def lockup(x, y, h):
     return f'<g transform="translate({x} {y}) scale({s})">{LOCKUP_INNER}</g>'
 
 
-def text(x, y, s, size, fill="#fff", family="Grinda Bib", weight=900, anchor="start", spacing=0, opacity=1):
+def text(x, y, s, size, fill="#fff", family="Steppie Bib", weight=900, anchor="start", spacing=0, opacity=1):
     esc = s.replace("&", "&amp;").replace("<", "&lt;")
     return (f'<text x="{x}" y="{y}" font-family="{family}" font-weight="{weight}" font-size="{size}" fill="{fill}" '
             f'text-anchor="{anchor}" letter-spacing="{spacing}" opacity="{opacity}">{esc}</text>')
@@ -49,7 +49,7 @@ def character_sheet():
     b = [track(1700, 360, 1500, 560, 90, 0.06)]
     b.append(lockup(90, 80, 70))
     b.append(text(90, 260, "MEET GRIN.", 120))
-    b.append(ui(94, 320, "The Grinda lion. Walks with you, grows with you.", 40, "#C9D6FF", 500))
+    b.append(ui(94, 320, "The Steppie lion. Walks with you, grows with you.", 40, "#C9D6FF", 500))
     moods = [("happy", "idle", "Happy"), ("cheer", "cheer", "Goal hit"), ("roar", "flex", "Roar"), ("worried", "idle", "Behind pace"),
              ("sleep", "idle", "Night"), ("wink", "wave", "Hey!"), ("proud", "hold", "Proud")]
     for i, (m, p, label) in enumerate(moods):
@@ -58,7 +58,7 @@ def character_sheet():
         b.append(grin_at(m, p, 2, cx, 800, 340))
         b.append(ui(cx, 840, label, 30, "#fff", 700, "middle"))
     b.append(text(90, 980, "THE MANE GROWS WITH YOU", 54, VOLT, spacing=2))
-    b.append(ui(94, 1030, "Hit your goal and Grin's mane fills out: goal days in the last 14.", 34, "#C9D6FF", 500))
+    b.append(ui(94, 1030, "Hit your goal and Steppie's mane fills out: goal days in the last 14.", 34, "#C9D6FF", 500))
     for i, (lvl, name, rng) in enumerate([(0, "Cub", "0-3 days"), (1, "Young lion", "4-7 days"), (2, "Lion", "8-11 days"), (3, "King of the track", "12-14 days")]):
         cx = 300 + i * 560
         b.append(grin_at("happy" if lvl < 3 else "proud", "idle", lvl, cx, 1390, 300))
@@ -93,12 +93,12 @@ def post(name, l1, l2, mood, pose, mane, sub, accent=VOLT, extra=""):
     b.append(ui(84, 410, sub, 36, "#C9D6FF", 500))
     b.append(extra or grin_at(mood, pose, mane, 540, 1190, 700))
     b.append(lockup(80, 1240, 52))
-    b.append(ui(1000, 1278, "#WalkItOff", 30, "#C9D6FF", 600, "end"))
+    b.append(ui(1000, 1278, "#BackYourself", 30, "#C9D6FF", 600, "end"))
     save(name, W, H, "".join(b))
 
 
 def posts():
-    post("post-mane-goal", "MANE GOAL:", "WALK.", "roar", "flex", 3, "Every goal day grows Grin's mane.")
+    post("post-mane-goal", "MANE GOAL:", "WALK.", "roar", "flex", 3, "Every goal day grows Steppie's mane.")
     post("post-keep-your-money", "WALK IT OFF.", "KEEP YOUR MONEY.", "happy", "wave", 2, "Hit your steps and every cent comes back.")
     post("post-hold-it", "HOLD IT. WALK IT.", "GET IT BACK.", "proud", "hold", 2, "Short races are only a hold. Never a charge if you finish.")
     evo = "".join(grin_at("happy" if l < 3 else "proud", "idle", l, 170 + l * 247, 1150, 300 + l * 40) for l in range(4))

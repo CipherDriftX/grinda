@@ -1,6 +1,6 @@
-# Grinda design system
+# Steppie design system
 
-The world: **a stadium track seen from above**. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Grinda/DesignSystem/`.
+The world: **a stadium track seen from above**. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Steppie/DesignSystem/`.
 
 ## Colour
 
@@ -25,9 +25,9 @@ Rules: volt never decorates. Red never decorates. On cobalt, secondary text is `
 ## Type
 
 - **UI:** SF Pro text styles (Dynamic Type). Headings are bold/heavy and sized as `.title3`–`.largeTitle`.
-- **Numerals:** `BrandFont.numerals(size, relativeTo:)` uses Grinda Bib Black (Archivo, width 62, weight 900), like race-bib numbers. It's used for step counts, goals, money amounts, and day counts.
-- **Labels:** `BrandFont.label(size)` uses Grinda Bib Bold (width 75, weight 750), uppercase, for bib headers, grid labels, and money bands.
-- **Display:** Grinda Wide Black is for the wordmark only.
+- **Numerals:** `BrandFont.numerals(size, relativeTo:)` uses Steppie Bib Black (Archivo, width 62, weight 900), like race-bib numbers. It's used for step counts, goals, money amounts, and day counts.
+- **Labels:** `BrandFont.label(size)` uses Steppie Bib Bold (width 75, weight 750), uppercase, for bib headers, grid labels, and money bands.
+- **Display:** Steppie Wide Black is for the wordmark only.
 - No eyebrow or kicker labels above headings.
 
 ## Components
@@ -39,7 +39,7 @@ Rules: volt never decorates. Red never decorates. On cobalt, secondary text is `
 | `PunchRow` | `Bib.swift` | Hit = hole showing the field colour. Missed = red ×. Grace = dashed. Today = progress ring. |
 | `Guilloche` | `Bib.swift` | Fine sine-wave line work behind money. |
 | `HoldToPinButton` | `HoldToPin.swift` | Signature interaction: 1.6 s hold, a pin every 25% with a rigid haptic, success haptic at the end; release springs back in 0.25 s. |
-| `GTrackMark` | `GTrackMark.swift` | Live logo. Draws itself on Welcome. |
+| `StrideMark` | `StrideMark.swift` | Live logo. Draws itself on Welcome. |
 | Leader lines | `WalletView.swift` | Passbook "label …… value" rows. |
 | Buttons | `Motion.swift` | `.primary` (cobalt slab, 56 pt), `.onField` (white on cobalt), `.volt` (finish only), `.pressable` (scale 0.97). |
 
@@ -59,6 +59,6 @@ Depth: paper on ground, `shadow(black 14%, radius 18, y 10)`. No zero-offset glo
 
 A coach on your side. Specific numbers ("4,120 to go · about 38 min"), plain money language ("held · never charged if you finish"), and never shaming. Money copy appears only where money moves.
 
-## Mascot: Grin
+## Mascot: Steppie
 
-Source of truth: `brand/mascot/tools/grin.py` (400 × 460 canvas), exported to `ios/Grinda/DesignSystem/MascotArt.swift`. `GrinView(mood:pose:mane:hop:animated:)` renders layered Canvas parts: arms rotate about the shoulders, the head tilts about the neck, eyes blink about the eye line, and the tail sways about its base. Mascot colours (fur `#FFBE3D`, mane `#F0781E`) are used only on Grin and medals. Brand cobalt and volt appear only on his band and bib. Idle motion stays near-invisible. Hops use keyframed squash and stretch. Confetti (`ConfettiBurst`) is for rare moments only. See `brand/mascot/MASCOT.md`.
+Source of truth: `brand/mascot/tools/grin.py` (400 × 460 canvas), exported to `ios/Steppie/DesignSystem/MascotArt.swift`. `SteppieView(mood:pose:mane:hop:animated:)` renders layered Canvas parts: arms rotate about the shoulders, the head tilts about the neck, eyes blink about the eye line, and the tail sways about its base. Mascot colours (fur `#FFBE3D`, mane `#F0781E`) are used only on Steppie and medals. Brand cobalt and volt appear only on his band and bib. Idle motion stays near-invisible. Hops use keyframed squash and stretch. Confetti (`ConfettiBurst`) is for rare moments only. See `brand/mascot/MASCOT.md`.

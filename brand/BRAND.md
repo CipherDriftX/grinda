@@ -1,10 +1,10 @@
-# Grinda brand
+# Steppie brand
 
-![Grinda lockup](logo/lockup-on-cobalt.png)
+![Steppie lockup](logo/lockup-on-cobalt.png)
 
 ## Name
 
-**Grinda.** Two syllables, stress on the first (GRIN-da), ending in an open vowel like Tesla, Honda, Nokia, and Mazda. It reads the same in English and German, is easy to say after hearing it once, and carries a clear meaning: *the grind*, daily effort that adds up. The first syllable is a smile ("grin"). There's no generic descriptor in it (Step-, Walk-, Fit-), so the brand can grow beyond steps.
+**Steppie.** Two syllables, stress on the first (GRIN-da), ending in an open vowel like Tesla, Honda, Nokia, and Mazda. It reads the same in English and German, is easy to say after hearing it once, and carries a clear meaning: *the grind*, daily effort that adds up. The first syllable is a smile ("grin"). There's no generic descriptor in it (Step-, Walk-, Fit-), so the brand can grow beyond steps.
 
 ## The mark: G-Track
 
@@ -28,7 +28,7 @@ The symbol is one thick stroke drawn as a **running track seen from above**: two
 
 ## Wordmark
 
-`GRINDA` in **Grinda Wide Black** (Archivo, instanced at width 125 and weight 900, SIL OFL 1.1), tracked +4%, converted to outlines. Wide, heavy capitals read as institutional and trustworthy: the register of VISA, SONY, and FedEx rather than a startup's rounded lowercase.
+`STEPPIE` in **Steppie Wide Black** (Archivo, instanced at width 125 and weight 900, SIL OFL 1.1), tracked +4%, converted to outlines. Wide, heavy capitals read as institutional and trustworthy: the register of VISA, SONY, and FedEx rather than a startup's rounded lowercase.
 
 Lockup: symbol height = 1; wordmark cap height = 0.46; gap = 0.34. Clear space on every side = the bar length.
 
@@ -47,8 +47,8 @@ Dark mode: a floodlit track. Ink ground, cobalt lifted to `#3D6BFF` (4.3:1 on in
 ## Type
 
 - **UI:** SF Pro (system), Dynamic Type everywhere.
-- **Bib numerals & labels:** Grinda Bib Black (Archivo width 62, weight 900) and Grinda Bib Bold (width 75, weight 750). Tabular figures available.
-- **Wordmark / rare display:** Grinda Wide Black.
+- **Bib numerals & labels:** Steppie Bib Black (Archivo width 62, weight 900) and Steppie Bib Bold (width 75, weight 750). Tabular figures available.
+- **Wordmark / rare display:** Steppie Wide Black.
 
 ## Voice
 
