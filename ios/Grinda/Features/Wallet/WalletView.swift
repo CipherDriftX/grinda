@@ -136,8 +136,12 @@ private struct LedgerList: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Ledger").font(.system(.title3, weight: .bold)).padding(.bottom, 8)
             if model.ledger.isEmpty {
-                Text("Nothing yet. When you pin a bib, every hold, charge, release and refund shows up here with its Stripe reference.")
-                    .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                HStack(spacing: 12) {
+                    GrinView(mood: .sleep, mane: model.maneLevel)
+                        .frame(width: 80, height: 92)
+                    Text("Nothing yet. When you pin a bib, every hold, charge, release and refund shows up here with its Stripe reference.")
+                        .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                }
             }
             ForEach(Array(model.ledger.enumerated()), id: \.element.id) { i, e in
                 LedgerRow(entry: e)

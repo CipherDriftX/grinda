@@ -10,6 +10,7 @@ struct RacesView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
+                    if Walktober.isOn() { WalktoberBanner() }
                     if !model.liveRaces.isEmpty {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Running now").font(.system(.title3, weight: .bold))

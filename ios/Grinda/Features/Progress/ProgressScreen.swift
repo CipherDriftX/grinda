@@ -9,10 +9,12 @@ struct ProgressScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
-                    DistanceStory().arrive(0)
-                    WeightSection(loggingWeight: $loggingWeight).arrive(1)
-                    StepsMonth().arrive(2)
-                    StreakCalendar().arrive(3)
+                    ManeCard().arrive(0)
+                    DistanceStory().arrive(1)
+                    TrophyCase().arrive(2)
+                    WeightSection(loggingWeight: $loggingWeight).arrive(3)
+                    StepsMonth().arrive(4)
+                    StreakCalendar().arrive(5)
                     Text("Calories and fat are estimates from steps and body weight (about 0.04 kcal per step at 75 kg; 7,700 kcal ≈ 1 kg of fat). Grinda isn't medical advice.")
                         .font(.caption)
                         .foregroundStyle(Palette.inkSecondary)
@@ -237,5 +239,40 @@ private struct LogWeightSheet: View {
             let kg = model.profile.weightKg ?? 80
             value = metric ? (kg * 10).rounded() / 10 : (kg / 0.453_592 * 10).rounded() / 10
         }
+    }
+}
+
+/// Grin grows with you: his mane reflects your goal days over the last two weeks.
+/// It never resets overnight; a missed day just stops it growing for a while.
+private struct ManeCard: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let level = model.maneLevel
+        let n = model.goalDays14
+        let next = level < 3 ? GrinCoach.maneThresholds[level + 1] : nil
+        HStack(alignment: .center, spacing: 16) {
+            GrinView(mood: level >= 2 ? .proud : .happy, mane: level)
+                .frame(width: 110, height: 126)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(GrinCoach.maneNames[level])
+                    .font(.system(.title3, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+                Text(next.map { "Goal hit \(n) of the last 14 days. \($0 - n) more and Grin's mane grows." } ?? "Goal hit \(n) of the last 14 days. Grin has never looked better.")
+                    .font(.subheadline)
+                    .foregroundStyle(Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    ForEach(0..<14, id: \.self) { i in
+                        Capsule()
+                            .fill(i < n ? Palette.cobalt : Palette.hairline)
+                            .frame(height: 6)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
+        .padding(16)
+        .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

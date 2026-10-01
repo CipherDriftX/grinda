@@ -28,6 +28,11 @@ final class AppModel {
     var showingProfile = false
     var showingPaywall = false
     var lastError: String?
+    var lifetimeSteps = 0
+    var newMilestone: Milestone?
+    /// Increment to make Grin hop on Today (goal hit, taps).
+    var grinHop = 0
+    var coachSeed = Int.random(in: 0..<1000)
 
     let isDemo: Bool
     let health: HealthProviding
@@ -70,6 +75,43 @@ final class AppModel {
         let now = Date.now
         let h = Double(cal.component(.hour, from: now)) + Double(cal.component(.minute, from: now)) / 60
         return min(max((h - 7) / 14, 0), 1)
+    }
+
+    /// Goal days in the last 14 (today counts once it's hit).
+    var goalDays14: Int {
+        history.suffix(14).filter { day in
+            Calendar.current.isDateInToday(day.date) ? todaySteps >= todayGoal : day.steps >= profile.dailyGoal
+        }.count
+    }
+
+    var maneLevel: Int { GrinCoach.maneLevel(goalDaysOf14: goalDays14) }
+
+    var lifetimeKm: Double { Estimate.km(steps: lifetimeSteps) }
+
+    var coachContext: GrinCoach.Context {
+        GrinCoach.Context(steps: todaySteps, goal: todayGoal, stake: primaryRace?.stake, streak: streak,
+                          pacerSteps: Int(Double(todayGoal) * pacerFraction),
+                          hour: Calendar.current.component(.hour, from: .now))
+    }
+
+    var earnedMilestones: Set<String> {
+        let finished = races.filter { $0.status == .won }
+        var out = Set<String>()
+        for m in Milestone.all {
+            let ok: Bool
+            switch m.kind {
+            case .km: ok = lifetimeKm >= m.threshold
+            case .streak: ok = Double(streak) >= m.threshold
+            case .races: ok = Double(finished.count) >= m.threshold
+            case .season:
+                ok = finished.contains { r in
+                    let c = Calendar.current.dateComponents([.year, .month], from: r.settledAt ?? r.endDate)
+                    return c.year == 2026 && c.month == 10
+                }
+            }
+            if ok { out.insert(m.id) }
+        }
+        return out
     }
 
     var streak: Int {
@@ -142,13 +184,22 @@ final class AppModel {
 
     func refresh() async {
         guard healthConnected else { return }
+        let wasDone = todaySteps >= todayGoal && todaySteps > 0
         if let today = try? await health.steps(on: .now) {
             todaySteps = today.total
             todayHourly = today.hourly
         }
+        if !wasDone && todaySteps >= todayGoal && todaySteps > 0 {
+            grinHop += 1
+            Haptics.success()
+        }
         history = (try? await health.dailySteps(days: 35)) ?? history
         weights = (try? await health.weights(days: 90)) ?? weights
+        if let year = try? await health.dailySteps(days: 365) {
+            lifetimeSteps = year.map(\.steps).reduce(0, +)
+        }
         reconcileRaces()
+        checkMilestones()
         writeWidget()
         if profile.notificationsEnabled {
             NotificationService.planPaceCheck(steps: todaySteps, goal: todayGoal, stake: primaryRace?.stake)
@@ -182,7 +233,8 @@ final class AppModel {
         let r = primaryRace
         WidgetSnapshot(
             steps: todaySteps, goal: todayGoal, stakeLabel: r?.stake?.formatted, raceName: r?.name,
-            dayIndex: r?.todayIndex.map { $0 + 1 }, dayCount: r?.days.count, updatedAt: .now
+            dayIndex: r?.todayIndex.map { $0 + 1 }, dayCount: r?.days.count, updatedAt: .now,
+            maneLevel: maneLevel, line: GrinCoach.line(coachContext, seed: coachSeed)
         ).save()
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -216,6 +268,25 @@ final class AppModel {
             }
         }
         persist()
+    }
+
+    // MARK: Milestones
+
+    private static let seenKey = "grinda.seenMilestones"
+
+    /// Presents the first newly earned medal. On first launch, existing medals are
+    /// marked seen silently so people aren't flooded.
+    func checkMilestones() {
+        let defaults = UserDefaults.standard
+        let earned = earnedMilestones
+        guard let seen = defaults.stringArray(forKey: Self.seenKey) else {
+            defaults.set(Array(earned), forKey: Self.seenKey)
+            return
+        }
+        let fresh = earned.subtracting(seen)
+        guard !fresh.isEmpty, !isDemo else { return }
+        defaults.set(Array(earned.union(seen)), forKey: Self.seenKey)
+        newMilestone = Milestone.all.first { fresh.contains($0.id) }
     }
 
     // MARK: Entering races

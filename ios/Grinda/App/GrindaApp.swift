@@ -68,6 +68,7 @@ struct MainTabs: View {
         .sheet(isPresented: $model.showingProfile) { ProfileView() }
         .sheet(isPresented: $model.showingPaywall) { PaywallView() }
         .fullScreenCover(item: $model.celebrating) { race in FinishView(race: race) }
+        .fullScreenCover(item: $model.newMilestone) { m in MilestoneSheet(milestone: m) }
     }
 }
 
@@ -88,6 +89,8 @@ struct DemoRouter: View {
         case "pinning": PinningStage(previewPins: 2)
         case "pinning-demo": PinningStage(autoplay: true)
         case "finish": FinishView(race: DemoSeed.races()[1])
+        case "milestone": MilestoneSheet(milestone: Milestone.all[1])
+        case "entered": NavigationStack { ContractView(template: RaceTemplate.board[0], initialStake: 20, showEntered: true) }
         case "paywall": PaywallView()
         case "profile": ProfileView()
         default: MainTabs()

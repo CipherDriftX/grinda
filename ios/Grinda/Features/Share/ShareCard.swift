@@ -45,6 +45,7 @@ struct ShareCardView: View {
                     .font(.system(size: 34, weight: .heavy))
                     .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.trailing, 96)
                 Text("#WalkItOff")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Palette.onFieldSecondary)
@@ -58,6 +59,12 @@ struct ShareCardView: View {
                 .padding(.top, 26)
             }
             .padding(30)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            GrinView(mood: finished ? .cheer : .happy, pose: finished ? .cheer : .wave, mane: 2, animated: false)
+                .frame(width: 104, height: 120)
+                .padding(.trailing, 18)
+                .padding(.bottom, 64)
         }
         .frame(width: 360, height: 450)
     }

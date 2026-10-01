@@ -17,11 +17,15 @@ struct FinishView: View {
     var body: some View {
         ZStack {
             Palette.field.ignoresSafeArea()
+            if broken { ConfettiBurst(count: 90) }
             VStack(spacing: 0) {
-                Spacer(minLength: 40)
+                Spacer(minLength: 24)
                 FinishTape(broken: broken)
                     .frame(height: 64)
-                    .padding(.bottom, 44)
+                    .padding(.bottom, 8)
+                GrinView(mood: broken ? .cheer : .proud, pose: broken ? .cheer : .idle, mane: 3, hop: broken ? 1 : 0)
+                    .frame(height: 170)
+                    .padding(.bottom, 8)
                 amount
                 Text(detail)
                     .font(.body)
@@ -48,7 +52,7 @@ struct FinishView: View {
         VStack(spacing: 0) {
             if let stake {
                 Text(Money(cents: shownAmount, currency: stake.currency).formatted)
-                    .font(BrandFont.numerals(112))
+                    .font(BrandFont.numerals(96))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText(value: Double(shownAmount)))
                     .monospacedDigit()

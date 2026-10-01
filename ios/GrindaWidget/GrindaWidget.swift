@@ -72,29 +72,23 @@ struct GrindaWidgetView: View {
     }
 
     private var medium: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                WidgetTrack().stroke(Palette.lane, lineWidth: 12)
-                WidgetTrack().trim(from: 0, to: s.progress)
-                    .stroke(done ? Palette.volt : .white, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                VStack(spacing: 0) {
-                    Text(s.steps.formatted()).font(BrandFont.numerals(34)).foregroundStyle(.white)
-                    Text("of \(s.goal.formatted())").font(.caption2.weight(.semibold)).foregroundStyle(Palette.onFieldSecondary)
+        HStack(spacing: 10) {
+            GrinView(mood: done ? .cheer : .happy, pose: done ? .cheer : .idle, mane: s.maneLevel ?? 2, animated: false)
+                .frame(width: 92, height: 106)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(s.line ?? (done ? "Goal hit. That's how lions walk." : "\(s.remaining.formatted()) to go. You've got this."))
+                    .font(.system(.subheadline, weight: .semibold))
+                    .foregroundStyle(Palette.cobalt)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .lineLimit(3)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(s.steps.formatted()).font(BrandFont.numerals(28)).foregroundStyle(.white)
+                    Text("of \(s.goal.formatted())").font(.caption.weight(.semibold)).foregroundStyle(Palette.onFieldSecondary)
                 }
-            }
-            .frame(width: 150, height: 84)
-            VStack(alignment: .leading, spacing: 4) {
-                if let race = s.raceName {
-                    Text(race.uppercased()).font(BrandFont.label(13)).foregroundStyle(Palette.onFieldSecondary)
-                }
-                if let i = s.dayIndex, let n = s.dayCount {
-                    Text("Day \(i) of \(n)").font(.headline).foregroundStyle(.white)
-                }
-                Text(done ? "Goal hit. Nice." : "\(s.remaining.formatted()) to go")
-                    .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                if let stake = s.stakeLabel {
-                    Text("\(stake) on the line").font(.caption).foregroundStyle(Palette.onFieldSecondary)
-                }
+                ProgressView(value: s.progress)
+                    .tint(done ? Palette.volt : .white)
             }
             Spacer(minLength: 0)
         }

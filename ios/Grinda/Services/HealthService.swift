@@ -165,6 +165,8 @@ final class DemoHealthService: HealthProviding {
         var out: [DaySteps] = []
         for i in stride(from: days - 1, through: 0, by: -1) {
             let d = cal.date(byAdding: .day, value: -i, to: today)!
+            // The demo walker started about two months ago.
+            if i > 60 { out.append(DaySteps(date: d, steps: 0)); continue }
             var total = try await steps(on: d).total
             // Earlier weeks were lower: the habit is building.
             if i > 21 { total = Int(Double(total) * 0.68) } else if i > 14 { total = Int(Double(total) * 0.82) }

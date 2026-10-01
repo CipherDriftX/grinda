@@ -7,7 +7,7 @@ set -euo pipefail
 APP="$1"
 OUT="$2"
 BUNDLE="com.cipherdriftx.grinda"
-SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning progress wallet finish}"
+SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning entered progress wallet finish milestone}"
 mkdir -p "$OUT"
 
 UDID="${SIM_UDID:-$(bash "$(dirname "$0")/sim-pick.sh")}"

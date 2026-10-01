@@ -10,13 +10,15 @@ struct WidgetSnapshot: Codable, Equatable {
     var dayIndex: Int?
     var dayCount: Int?
     var updatedAt: Date
+    var maneLevel: Int? = nil
+    var line: String? = nil
 
     var progress: Double { goal > 0 ? min(Double(steps) / Double(goal), 1) : 0 }
     var remaining: Int { max(goal - steps, 0) }
 
     static let placeholder = WidgetSnapshot(
         steps: 6_480, goal: 10_000, stakeLabel: "€20", raceName: "10K Week",
-        dayIndex: 4, dayCount: 7, updatedAt: .now
+        dayIndex: 4, dayCount: 7, updatedAt: .now, maneLevel: 2, line: "3,520 to go. You've got this."
     )
 
     private static let key = "grinda.widget.snapshot"

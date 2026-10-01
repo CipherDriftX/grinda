@@ -86,6 +86,7 @@ struct StepScaffold<Content: View>: View {
     let cta: String
     var ctaEnabled = true
     var secondary: (label: String, action: () -> Void)? = nil
+    var grin: GrinMood? = nil
     let action: () -> Void
     @ViewBuilder let content: Content
 
@@ -93,16 +94,23 @@ struct StepScaffold<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(title)
-                            .font(.system(.largeTitle, weight: .bold))
-                            .foregroundStyle(Palette.ink)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let subtitle {
-                            Text(subtitle)
-                                .font(.body)
-                                .foregroundStyle(Palette.inkSecondary)
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(title)
+                                .font(.system(.largeTitle, weight: .bold))
+                                .foregroundStyle(Palette.ink)
                                 .fixedSize(horizontal: false, vertical: true)
+                            if let subtitle {
+                                Text(subtitle)
+                                    .font(.body)
+                                    .foregroundStyle(Palette.inkSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        if let grin {
+                            Spacer(minLength: 0)
+                            GrinView(mood: grin, pose: grin == .cheer ? .cheer : (grin == .proud ? .hold : .idle), mane: 1)
+                                .frame(width: 78, height: 90)
                         }
                     }
                     content
@@ -132,24 +140,34 @@ struct StepScaffold<Content: View>: View {
 private struct WelcomeStep: View {
     let next: () -> Void
     @State private var shown = false
+    @State private var hop = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer()
             GTrackMark(color: .white, animated: true)
-                .frame(width: 132)
-                .padding(.bottom, 40)
+                .frame(width: 58)
+                .padding(.top, 12)
+            Spacer(minLength: 12)
+            HStack(alignment: .center, spacing: 6) {
+                GrinView(mood: .happy, pose: .wave, mane: 2, hop: hop)
+                    .frame(height: 220)
+                GrinBubble(text: "Hey, I'm Grin. I'll walk with you.", onField: true)
+                    .opacity(shown ? 1 : 0)
+                    .padding(.bottom, 60)
+            }
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 14)
             Text("Walk it off.\nKeep your money.")
-                .font(.system(size: 44, weight: .heavy))
+                .font(.system(size: 42, weight: .heavy))
                 .kerning(-0.8)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 18)
                 .opacity(shown ? 1 : 0)
-                .offset(y: shown ? 0 : 10)
             Text("Put money on your daily walk. Hit your steps and every cent comes back. It's the push that finally makes the weight come off.")
                 .font(.title3)
                 .foregroundStyle(Palette.onFieldSecondary)
-                .padding(.top, 16)
+                .padding(.top, 12)
                 .fixedSize(horizontal: false, vertical: true)
                 .opacity(shown ? 1 : 0)
             Spacer()
@@ -166,7 +184,12 @@ private struct WelcomeStep: View {
             .padding(.bottom, 8)
         }
         .padding(.horizontal, 24)
-        .onAppear { withAnimation(Motion.standard.delay(0.9)) { shown = true } }
+        .task {
+            try? await Task.sleep(for: .milliseconds(700))
+            withAnimation(Motion.standard) { shown = true }
+            try? await Task.sleep(for: .milliseconds(350))
+            hop += 1
+        }
     }
 }
 
@@ -176,7 +199,7 @@ private struct WhyStep: View {
 
     var body: some View {
         StepScaffold(title: "What brings you here?", subtitle: "We'll remind you of this on the hard days.",
-                     cta: "Continue", ctaEnabled: model.profile.why != nil, action: next) {
+                     cta: "Continue", ctaEnabled: model.profile.why != nil, grin: model.profile.why == nil ? .calm : .happy, action: next) {
             VStack(spacing: 10) {
                 ForEach(WalkingWhy.allCases) { why in
                     let selected = model.profile.why == why
@@ -221,7 +244,7 @@ private struct BodyStep: View {
 
     var body: some View {
         StepScaffold(title: "Where are you starting?", subtitle: "Only you see this. It lets us turn steps into something that matters to you.",
-                     cta: "Continue", secondary: ("Skip for now", next), action: save) {
+                     cta: "Continue", secondary: ("Skip for now", next), grin: .proud, action: save) {
             HStack(spacing: 12) {
                 picker("Now", $weight)
                 Image(systemName: "arrow.right").foregroundStyle(Palette.inkSecondary)
@@ -273,6 +296,7 @@ private struct HealthStep: View {
         StepScaffold(title: "Connect your steps",
                      subtitle: "Grinda reads steps from Apple Health, so anything that syncs to Health counts.",
                      cta: model.healthConnected ? "Continue" : "Connect Apple Health",
+                     grin: .wink,
                      action: { model.healthConnected ? next() : connect() }) {
             FlowChips(items: sources)
             VStack(alignment: .leading, spacing: 12) {
@@ -342,7 +366,7 @@ private struct BaselineStep: View {
     var body: some View {
         StepScaffold(title: baseline > 0 ? "Here's your starting line" : "Pick a daily goal",
                      subtitle: baseline > 0 ? "Your average over the last two weeks:" : "Most adults do well between 7,000 and 10,000 steps a day.",
-                     cta: "Set \(goal.formatted()) a day", action: save) {
+                     cta: "Set \(goal.formatted()) a day", grin: .cheer, action: save) {
             if baseline > 0 {
                 Text(baseline.formatted())
                     .font(BrandFont.numerals(76))
@@ -412,7 +436,7 @@ private struct HowStep: View {
     let next: () -> Void
 
     var body: some View {
-        StepScaffold(title: "How it works", subtitle: "Three steps. No fine print.", cta: "Got it", action: next) {
+        StepScaffold(title: "How it works", subtitle: "Three steps. No fine print.", cta: "Got it", grin: .proud, action: next) {
             VStack(spacing: 12) {
                 HowRow(n: "1", title: "Pin a bib", text: "Choose a race and a stake. Short races are only a hold on your card, never a charge if you finish.")
                 HowRow(n: "2", title: "Walk your laps", text: "Your iPhone or watch counts. We nudge you once in the evening if you're behind, never more.")
@@ -456,7 +480,7 @@ private struct NotificationsStep: View {
     var body: some View {
         StepScaffold(title: "One nudge, only when it helps",
                      subtitle: "If you're behind in the evening, we'll tell you exactly how far to walk. That's it.",
-                     cta: "Allow notifications", secondary: ("Not now", next), action: allow) {
+                     cta: "Allow notifications", secondary: ("Not now", next), grin: .happy, action: allow) {
             HStack(alignment: .top, spacing: 12) {
                 Image("GTrack")
                     .renderingMode(.template)

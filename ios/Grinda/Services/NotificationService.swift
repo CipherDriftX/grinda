@@ -25,11 +25,11 @@ enum NotificationService {
 
         let content = UNMutableNotificationContent()
         if let stake {
-            content.title = "Keep your \(stake.formatted)"
-            content.body = "About \(left.formatted()) steps left today. A \(minutes)-minute walk does it."
+            content.title = "Grin's lacing up 🦁"
+            content.body = "About \(left.formatted()) steps keeps your \(stake.formatted). A \(minutes)-minute walk does it."
         } else {
-            content.title = "\(left.formatted()) steps to go"
-            content.body = "A \(minutes)-minute walk closes today's lap."
+            content.title = "Grin's waiting at the track"
+            content.body = "\(left.formatted()) steps to go. A \(minutes)-minute walk closes today's lap."
         }
         content.sound = .default
         content.interruptionLevel = .timeSensitive

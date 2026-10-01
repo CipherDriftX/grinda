@@ -8,8 +8,9 @@ struct PaywallView: View {
     var body: some View {
         SubscriptionStoreView(groupID: StoreService.groupID) {
             VStack(alignment: .leading, spacing: 22) {
-                GTrackMark(color: .white)
-                    .frame(width: 70)
+                GrinView(mood: .proud, pose: .flex, mane: 3)
+                    .frame(height: 150)
+                    .frame(maxWidth: .infinity)
                 Text("Grinda Pro")
                     .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(.white)
@@ -19,6 +20,7 @@ struct PaywallView: View {
                     ProLine(symbol: "square.stack.3d.up", text: "Run up to 3 races at once")
                     ProLine(symbol: "person.2", text: "Race friends, each on your own stake")
                     ProLine(symbol: "chart.xyaxis.line", text: "Pace, best hours and weight projection")
+                    ProLine(symbol: "app.badge", text: "Grin app icon for your home screen")
                 }
                 Text("Pro is about more ways to finish. Every stake still comes back in full when you do.")
                     .font(.subheadline)

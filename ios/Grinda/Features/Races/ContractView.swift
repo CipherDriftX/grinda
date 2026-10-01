@@ -6,6 +6,7 @@ struct ContractView: View {
     var initialStake: Int? = nil
     var previewPins: Int = 0
     var autoplay = false
+    var showEntered = false
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -43,6 +44,7 @@ struct ContractView: View {
         .onAppear {
             if stake == 0 { stake = initialStake ?? template.suggestedStakes.dropFirst().first ?? template.suggestedStakes.first ?? 0 }
             if previewPins > 0 { pins = previewPins }
+            if showEntered { entered = true }
         }
         .alert("Couldn't start the race", isPresented: .constant(error != nil)) {
             Button("OK") { error = nil; rearm() }
@@ -202,11 +204,10 @@ private struct EnteredOverlay: View {
     var body: some View {
         ZStack {
             Palette.field.ignoresSafeArea()
+            ConfettiBurst()
             VStack(spacing: 18) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Palette.volt)
-                    .symbolEffect(.bounce, value: shown)
+                GrinView(mood: .roar, pose: .flex, mane: 2, hop: shown ? 1 : 0)
+                    .frame(height: 200)
                 Text("You're in.")
                     .font(.system(.largeTitle, weight: .bold))
                     .foregroundStyle(.white)
@@ -224,6 +225,7 @@ private struct EnteredOverlay: View {
         }
         .onAppear {
             withAnimation(Motion.standard) { shown = true }
+            Haptics.success()
         }
     }
 }
@@ -238,11 +240,15 @@ struct PinningStage: View {
 
     var body: some View {
         VStack(spacing: 28) {
-            Text(done ? "Pinned. You're in." : "Hold to commit")
-                .font(.system(.largeTitle, weight: .bold))
-                .foregroundStyle(Palette.ink)
-                .contentTransition(.opacity)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .bottom) {
+                Text(done ? "Pinned.\nYou're in." : "Hold to\ncommit")
+                    .font(.system(.largeTitle, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+                    .contentTransition(.opacity)
+                Spacer()
+                GrinView(mood: done ? .roar : (pins > 0 ? .proud : .happy), pose: done ? .flex : .hold, mane: 2, hop: done ? 1 : 0)
+                    .frame(width: 110, height: 126)
+            }
             BibCard(template: RaceTemplate.board[0], stake: 20, bibNumber: 2_417, pinned: pins)
             Text("Four pins, one for each corner. Let go early and nothing happens.")
                 .font(.body)

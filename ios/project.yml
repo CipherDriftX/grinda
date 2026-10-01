@@ -75,6 +75,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cipherdriftx.grinda
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-Grin
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
   GrindaWidget:
@@ -83,6 +85,10 @@ targets:
     sources:
       - path: GrindaWidget
       - path: Grinda/DesignSystem/Palette.swift
+      - path: Grinda/DesignSystem/Mascot.swift
+      - path: Grinda/DesignSystem/MascotArt.swift
+      - path: Grinda/DesignSystem/Motion.swift
+      - path: Grinda/Models/Models.swift
       - path: Grinda/Models/WidgetSnapshot.swift
       - path: Grinda/Resources/Fonts
         buildPhase: resources

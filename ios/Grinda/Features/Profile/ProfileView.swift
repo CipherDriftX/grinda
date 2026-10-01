@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ProfileView: View {
     @Environment(AppModel.self) private var model
@@ -57,8 +58,9 @@ struct ProfileView: View {
                 }
 
                 Section {
+                    AppIconPicker()
                     Button(model.isPro ? "Manage Grinda Pro" : "Get Grinda Pro") { model.showingPaywall = true }
-                }
+                } header: { Text("Grinda Pro") }
 
                 Section("The fine print, in large print") {
                     NavigationLink("Race rules") { LegalText(title: "Race rules", text: Legal.rules) }
@@ -147,4 +149,47 @@ enum Legal {
     static let health = """
     Grinda is a motivation tool, not a medical device. Calorie and fat figures are estimates based on step count and body weight. Talk to a doctor before starting a new exercise plan, especially if you have a health condition.
     """
+}
+
+/// Pro perk: put Grin on the home screen.
+private struct AppIconPicker: View {
+    @Environment(AppModel.self) private var model
+    @State private var current = UIApplication.shared.alternateIconName
+
+    var body: some View {
+        HStack(spacing: 18) {
+            option(nil, image: "IconPreviewClassic", label: "Classic")
+            option("AppIcon-Grin", image: "IconPreviewGrin", label: "Grin")
+            Spacer()
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func option(_ name: String?, image: String, label: String) -> some View {
+        let selected = current == name
+        return Button {
+            guard model.isPro || name == nil else { model.showingPaywall = true; return }
+            Task {
+                try? await UIApplication.shared.setAlternateIconName(name)
+                current = UIApplication.shared.alternateIconName
+                Haptics.tick()
+            }
+        } label: {
+            VStack(spacing: 6) {
+                Image(image)
+                    .resizable()
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(selected ? Palette.cobalt : .clear, lineWidth: 3))
+                HStack(spacing: 3) {
+                    Text(label).font(.caption.weight(.semibold))
+                    if name != nil && !model.isPro { Image(systemName: "lock.fill").font(.caption2) }
+                }
+                .foregroundStyle(.primary)
+            }
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("\(label) app icon\(selected ? ", selected" : "")")
+    }
 }

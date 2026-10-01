@@ -9,6 +9,9 @@ struct TodayView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     TodayField()
+                    GrinRow()
+                        .padding(.horizontal, 16)
+                        .padding(.top, -40)
                     VStack(alignment: .leading, spacing: 28) {
                         if let race = model.primaryRace {
                             NavigationLink(value: race) {
@@ -23,7 +26,7 @@ struct TodayView: View {
                         CoachNote().arrive(3)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 24)
+                    .padding(.top, 12)
                     .padding(.bottom, 40)
                 }
             }
@@ -57,7 +60,7 @@ private struct TodayField: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 62)
-        .padding(.bottom, 26)
+        .padding(.bottom, 48)
         .background(Palette.field)
     }
 
@@ -233,5 +236,50 @@ private struct CoachNote: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// Grin, peeking over the edge of the track. Says something specific to your
+/// day; tap him for a reaction (a small, honest variable reward).
+private struct GrinRow: View {
+    @Environment(AppModel.self) private var model
+    @State private var tapLine: String?
+    @State private var tapMood: GrinMood?
+    @State private var hop = 0
+    @State private var taps = 0
+
+    var body: some View {
+        let ctx = model.coachContext
+        let mood = tapMood ?? GrinCoach.mood(ctx)
+        HStack(alignment: .center, spacing: 14) {
+            GrinView(mood: mood, pose: mood == .cheer ? .cheer : (mood == .roar ? .flex : .idle),
+                     mane: model.maneLevel, hop: hop + model.grinHop)
+                .frame(width: 96, height: 110)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: react)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Tap Grin for a reaction")
+            GrinBubble(text: tapLine ?? GrinCoach.line(ctx, seed: model.coachSeed))
+                .padding(.top, 26)
+            Spacer(minLength: 0)
+        }
+        .animation(Motion.standard, value: tapLine)
+    }
+
+    private func react() {
+        taps += 1
+        Haptics.soft()
+        hop += 1
+        let line = GrinCoach.tapLines[(model.coachSeed + taps) % GrinCoach.tapLines.count]
+        tapLine = line
+        tapMood = line.hasPrefix("Roo") ? .roar : .wink
+        if line.hasPrefix("Roo") { Haptics.pin() }
+        let mine = taps
+        Task {
+            try? await Task.sleep(for: .seconds(2.6))
+            guard mine == taps else { return }
+            tapLine = nil
+            tapMood = nil
+        }
     }
 }
