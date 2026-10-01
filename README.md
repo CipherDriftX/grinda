@@ -1,54 +1,88 @@
-<p align="center"><img src="brand/logo/lockup-on-cobalt.png" width="520" alt="Grinda"></p>
+<p align="center"><img src="brand/mascot/renders/x-header.png" alt="Grinda: Money on the line. Lion at your side."></p>
 
 <h3 align="center">Walk it off. Keep your money.</h3>
 
 Grinda is an iPhone app that turns a daily walking goal into a commitment backed by your own money. You pin a race bib, stake an amount, and walk. When you finish, every cent comes back. Short races are only a **hold** on your card, so nothing is ever charged if you finish. If you miss, the stake is kept.
 
-It's built to help people lose weight by walking. The stake is the mechanism, not the point.
+It's built to help people lose weight by walking. The stake is the mechanism. **Grin**, the Grinda lion, keeps you company.
+
+## The app
 
 <p align="center">
   <img src="screenshots/light/onboarding-welcome.png" width="200">
   <img src="screenshots/light/today.png" width="200">
   <img src="screenshots/light/pinning.png" width="200">
-  <img src="screenshots/light/finish.png" width="200">
+  <img src="screenshots/light/entered.png" width="200">
 </p>
 <p align="center">
-  <img src="screenshots/light/races.png" width="200">
-  <img src="screenshots/light/contract.png" width="200">
+  <img src="screenshots/light/finish.png" width="200">
+  <img src="screenshots/light/milestone.png" width="200">
   <img src="screenshots/light/progress.png" width="200">
   <img src="screenshots/light/wallet.png" width="200">
 </p>
 <p align="center">
+  <img src="screenshots/light/races.png" width="200">
+  <img src="screenshots/light/contract.png" width="200">
+  <img src="screenshots/light/onboarding-baseline.png" width="200">
   <img src="screenshots/dark/today.png" width="200">
-  <img src="screenshots/dark/races.png" width="200">
-  <img src="screenshots/dark/progress.png" width="200">
-  <img src="screenshots/dark/wallet.png" width="200">
 </p>
 
 <p align="center"><img src="screenshots/pinning.gif" width="260" alt="Hold to pin your bib"><br><em>The signature interaction: hold to pin your bib.</em></p>
 
-Screenshots are real iOS Simulator captures (iPhone, 6.9") taken by CI in demo mode. The data is synthetic.
+These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode on every push. The data is synthetic. Dark mode versions are in [`screenshots/dark`](screenshots/dark).
+
+### App Store screenshots
+
+<p align="center">
+  <img src="ios/fastlane/screenshots/en-US/01_today.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/02_pinning.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/03_finish.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/04_wallet.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/05_progress.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/06_races.png" width="150">
+</p>
+
+## Meet Grin
+
+<p align="center"><img src="brand/mascot/renders/grin-character-sheet.png" alt="Grin character sheet"></p>
+
+Grin is a vector character built in code (`brand/mascot/tools/grin.py`). The same geometry renders the marketing art and animates natively in SwiftUI.
+- **Moods:** happy, calm, cheer, roar, worried, sleep, wink, proud.
+- **Poses:** idle, cheer, wave, hold, flex.
+- **The mane grows with you:** Cub → Young lion → Lion → King of the track, based on your goal days in the last 14. It never resets overnight.
+- **Where he appears:** Today (coach lines, tap him for a reaction), onboarding, the hold-to-pin flow, the finish, medals, empty states, the paywall, share cards, the widget, and notifications.
+- **Motion:** idle motion is near-invisible because people see it many times a day. Celebrations get squash-and-stretch hops, confetti, and haptics. Reduce Motion is respected everywhere.
+
+The engagement system (evolving mascot, medals, the Walktober campaign, Grin-voiced nudges) is documented with its research in [`brand/mascot/MASCOT.md`](brand/mascot/MASCOT.md).
+
+<p align="center">
+  <img src="brand/mascot/renders/post-mane-goal.png" width="180">
+  <img src="brand/mascot/renders/post-keep-your-money.png" width="180">
+  <img src="brand/mascot/renders/post-hold-it.png" width="180">
+  <img src="brand/mascot/renders/post-grow-your-mane.png" width="180">
+  <img src="brand/mascot/renders/post-walktober.png" width="180">
+</p>
 
 ## What's in the box
 
 | | |
 |---|---|
-| **Today** | Your steps as laps on a stadium track, with a ghost pacer, minutes-of-walking to go, and kcal. |
-| **Races** | A board of races (5-Day Sprint, 10K Week, Weekend Warrior, 30-Day Reset, free Practice Lap). Each race is a numbered bib. |
+| **Today** | Your steps as laps on a stadium track with a ghost pacer, plus Grin with a line about your actual day. |
+| **Races** | 5-Day Sprint, 10K Week, Weekend Warrior, 30-Day Reset, and a free Practice Lap. Each race is a numbered bib. |
 | **Commit** | The whole deal in plain words, then **hold to pin your bib**: four pins, four haptic taps, then Apple Pay via Stripe. |
-| **Progress** | Distance told as a journey, the weight trend against your goal, 30-day steps, and a punch card. |
-| **Wallet** | A passbook of every hold, charge, release, and refund with its Stripe reference, plus Grinda's own public books. |
-| **Finish** | The tape breaks, and your stake counts back up. Share card for X and Discord. |
-| **Also** | Home and Lock Screen widgets, evening pace nudge (max one), Grinda Pro (StoreKit 2), account deletion, EN/DE listing. |
+| **Progress** | Grin's mane, distance as a journey, the trophy case (13 medals), the weight trend, and a punch card. |
+| **Wallet** | A passbook of every hold, charge, release, and refund with its Stripe reference, plus Grinda's public books. |
+| **Finish** | The tape breaks, Grin cheers, confetti, and your stake counts back up. Share card for X and Discord. |
+| **Also** | Widgets with Grin, the evening pace nudge (max one), Grinda Pro (StoreKit 2, with a Grin app icon), account deletion, and an EN/DE listing. |
 
 ## Repo map
 
 - `ios/`: SwiftUI app (iOS 17+), widget, and fastlane. The project is generated by XcodeGen (`cd ios && xcodegen generate`).
 - `supabase/`: Postgres schema with RLS, plus Edge Functions: `create-stake`, `stripe-webhook`, `submit-steps`, `settle` (cron), `public-stats`, `delete-account`.
-- `site/`: the landing page, privacy, support, and race rules, at https://cipherdriftx.github.io/grinda/
-- `marketing/`: the weekly stats post for X and Discord, built from live numbers only.
-- `brand/`: name, G-Track symbol, wordmark, app icons, fonts, and the brand guide.
-- `docs/`: research, strategy (hooks, trust, economics, growth), the prompt audit, and the **shipping guide**.
+- `brand/`: name, G-Track symbol, wordmark, icons, fonts, and the **Grin mascot** (`brand/mascot/`: source, renders, bible).
+- `marketing/`: the weekly stats post for X and Discord (live numbers only) and the App Store frame generator.
+- `site/`: landing page, privacy, support, and race rules, at https://cipherdriftx.github.io/grinda/
+- `docs/`: research, strategy, the prompt audit, and the **shipping guide**.
 - `PRODUCT.md` and `DESIGN.md`: the product record and the design system.
 
 ## Run it

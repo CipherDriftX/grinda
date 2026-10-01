@@ -77,3 +77,13 @@ Assume average stake €20 and 73% completion (StepBet benchmark):
 1. v1 (this repo): steps challenges, stakes, Health, wallet, widgets, Pro, share cards.
 2. v1.1: friend challenges, Live Activities for the final hour, Garmin/Fitbit direct.
 3. v2: new challenge types (distance, active minutes, workouts, weight milestones), charity forfeit option, Android.
+
+## 10. Grin and the engagement layer (added 2026-10-01)
+
+Grin, the Grinda lion, carries the habit loop without changing the product:
+- **Trigger:** Grin-voiced evening nudge, at most one, only when behind.
+- **Action:** Today opens to Grin saying something specific about your day.
+- **Variable reward:** rotating coach lines, tap reactions, medal moments, confetti.
+- **Investment:** a mane that grows with goal days in the last 14, Finch-style.
+
+Plus the **trophy case** (13 medals), the **Walktober 2026** launch campaign (a cosmetic medal, no money involved), a **Grin app icon** for Pro, and a Discord emoji pack. Full rationale and research: [`brand/mascot/MASCOT.md`](../brand/mascot/MASCOT.md).

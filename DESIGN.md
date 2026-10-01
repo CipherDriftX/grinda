@@ -58,3 +58,7 @@ Depth: paper on ground, `shadow(black 14%, radius 18, y 10)`. No zero-offset glo
 ## Voice
 
 A coach on your side. Specific numbers ("4,120 to go · about 38 min"), plain money language ("held · never charged if you finish"), and never shaming. Money copy appears only where money moves.
+
+## Mascot: Grin
+
+Source of truth: `brand/mascot/tools/grin.py` (400 × 460 canvas), exported to `ios/Grinda/DesignSystem/MascotArt.swift`. `GrinView(mood:pose:mane:hop:animated:)` renders layered Canvas parts: arms rotate about the shoulders, the head tilts about the neck, eyes blink about the eye line, and the tail sways about its base. Mascot colours (fur `#FFBE3D`, mane `#F0781E`) are used only on Grin and medals. Brand cobalt and volt appear only on his band and bib. Idle motion stays near-invisible. Hops use keyframed squash and stretch. Confetti (`ConfettiBurst`) is for rare moments only. See `brand/mascot/MASCOT.md`.
