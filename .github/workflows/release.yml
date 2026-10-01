@@ -57,8 +57,8 @@ jobs:
       - name: Screenshots for the store listing
         if: inputs.lane == 'metadata'
         run: |
-          mkdir -p ios/fastlane/screenshots/en-US
-          python3 marketing/appstore_frames.py
+          # Framed by marketing/appstore_frames.py and committed to the repo.
+          ls ios/fastlane/screenshots/en-US
 
       - name: Run lane
         working-directory: ios
