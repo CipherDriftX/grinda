@@ -171,7 +171,11 @@ final class AppModel {
     }
 
     func loadLeague() async {
-        if isDemo { leagueBoard = DemoSeed.league(me: profile.displayName ?? "You", grit: weekGrit); return }
+        if isDemo {
+            await refresh()
+            leagueBoard = DemoSeed.league(me: profile.displayName ?? "You", grit: weekGrit)
+            return
+        }
         leagueBoard = (try? await api.leagueBoard()) ?? []
     }
 
