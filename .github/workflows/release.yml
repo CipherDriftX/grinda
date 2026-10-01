@@ -58,7 +58,7 @@ jobs:
         if: inputs.lane == 'metadata'
         run: |
           mkdir -p ios/fastlane/screenshots/en-US
-          cp screenshots/light/*.png ios/fastlane/screenshots/en-US/ 2>/dev/null || true
+          python3 marketing/appstore_frames.py
 
       - name: Run lane
         working-directory: ios

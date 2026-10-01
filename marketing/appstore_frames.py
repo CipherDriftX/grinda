@@ -16,12 +16,12 @@ W, H = 1320, 2868
 COBALT, VOLT = "#1F4FD8", "#C8F03C"
 
 FRAMES = [
-    # file, line 1, line 2 (volt), grin mood, pose, mane, grin side
-    ("today", "YOUR STEPS.", "ON A TRACK.", "happy", "wave", 2, "left"),
-    ("pinning", "PUT MONEY", "ON YOUR WALK.", "proud", "hold", 2, "right"),
-    ("finish", "FINISH.", "GET IT ALL BACK.", "cheer", "cheer", 3, "left"),
+    # file, line 1, line 2 (volt), grin mood (None when Grin is already on screen), pose, mane, side
+    ("today", "YOUR STEPS.", "ON A TRACK.", None, None, 2, "left"),
+    ("pinning", "PUT MONEY", "ON YOUR WALK.", None, None, 2, "right"),
+    ("finish", "FINISH.", "GET IT ALL BACK.", None, None, 3, "left"),
     ("wallet", "EVERY CENT.", "IN PLAIN SIGHT.", "wink", "wave", 2, "right"),
-    ("progress", "GROW YOUR MANE.", "LOSE THE WEIGHT.", "roar", "flex", 3, "left"),
+    ("progress", "GROW YOUR MANE.", "LOSE THE WEIGHT.", None, None, 3, "left"),
     ("races", "PICK A RACE.", "START SMALL.", "happy", "idle", 1, "right"),
 ]
 
@@ -56,7 +56,7 @@ def frame(name, l1, l2, mood, pose, mane, side, idx):
     {text(W/2, 460, l2, 150, VOLT)}
     <rect x="{sx-14}" y="{sy-14}" width="{sw+28}" height="{sh+28}" rx="{r+14}" fill="#0E1116" filter="url(#s)"/>
     <image x="{sx}" y="{sy}" width="{sw}" height="{sh}" href="data:image/png;base64,{data}" clip-path="url(#c)" preserveAspectRatio="xMidYMin slice"/>
-    {grin.group(mood, pose, mane, tx=gx, ty=gy, scale=gs)}
+    {grin.group(mood, pose, mane, tx=gx, ty=gy, scale=gs) if mood else ''}
     '''
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{W}" height="{H}" viewBox="0 0 {W} {H}">{body}</svg>'
     tmp = os.path.join(OUT, f"_{name}.svg")
