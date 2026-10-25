@@ -2,6 +2,8 @@
 // Won: release the hold or refund in full. Lost: capture the hold or keep the charge.
 // Shields cover missed days beyond grace; unused ones go back to the locker.
 // A won comeback also refunds half of the missed race's stake.
+// Purse entries never refund: their entry stays in the purse. Once every entry
+// in a purse has settled, split_purse() pays the finishers.
 import { admin, handler, HttpError, json, stripe } from "../_shared/common.ts";
 
 const HOLD_SAFETY_MS = 6.5 * 24 * 3600_000; // Stripe card authorisations expire after ~7 days
@@ -21,6 +23,8 @@ Deno.serve(handler(async (req) => {
     results[race.id] = "hold converted to charge (will refund on finish)";
   }
 
+  const purses = new Set<string>();
+
   // 2. Settle due races.
   const { data: due } = await db.from("races").select("*")
     .eq("status", "active").lte("settles_at", new Date().toISOString()).limit(200);
@@ -29,7 +33,7 @@ Deno.serve(handler(async (req) => {
     const { data: days } = await db.from("race_days").select("*").eq("race_id", race.id).order("day");
     if (!days) continue;
 
-    if (days.some((d) => d.flagged)) {
+    if (days.some((d) => d.flagged || d.disputed)) {
       await db.from("races").update({ status: "underReview" }).eq("id", race.id);
       results[race.id] = "under review";
       continue;
@@ -48,6 +52,13 @@ Deno.serve(handler(async (req) => {
     const base = { race_id: race.id, user_id: race.user_id, currency: race.currency, amount_cents: race.stake_cents, stripe_ref: pi ?? "" };
 
     await db.from("races").update({ status: "settling" }).eq("id", race.id);
+
+    if (race.purse_id) {
+      await db.from("races").update({ status: won ? "won" : "lost", settled_at: new Date().toISOString() }).eq("id", race.id);
+      purses.add(race.purse_id);
+      results[race.id] = won ? "finished purse" : "out of purse";
+      continue;
+    }
 
     if (!pi || race.stake_cents == null) {
       await db.from("races").update({ status: won ? "won" : "lost", settled_at: new Date().toISOString() }).eq("id", race.id);
@@ -76,7 +87,17 @@ Deno.serve(handler(async (req) => {
     }
   }
 
-  return json({ settled: results });
+  // 3. Split purses whose entries have all settled (also retries ones that were waiting).
+  const { data: waiting } = await db.from("purses").select("id").is("settled_at", null)
+    .lt("starts_on", new Date().toISOString().slice(0, 10)).limit(100);
+  for (const p of waiting ?? []) purses.add(p.id);
+  const splits: unknown[] = [];
+  for (const id of purses) {
+    const { data } = await db.rpc("split_purse", { pid: id });
+    splits.push(data);
+  }
+
+  return json({ settled: results, purses: splits });
 }));
 
 // Half of the missed race's stake goes back to the card it came from.
