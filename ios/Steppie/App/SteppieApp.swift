@@ -71,6 +71,10 @@ struct MainTabs: View {
         .sheet(isPresented: $model.showingProfile) { ProfileView() }
         .sheet(isPresented: $model.showingPaywall) { PaywallView() }
         .sheet(isPresented: $model.showingShields) { ShieldShopView() }
+        .sheet(isPresented: $model.showingInvite) { InviteSheet() }
+        .sheet(isPresented: $model.showingPaidToPost) { PaidToPostSheet() }
+        .sheet(isPresented: $model.showingCashOut) { CashOutSheet() }
+        .sheet(isPresented: $model.showingHostPurse) { HostPurseSheet() }
         .fullScreenCover(isPresented: $model.showingShoeBox) { ShoeBoxSheet() }
         .fullScreenCover(item: $model.celebrating) { race in FinishView(race: race) }
         .fullScreenCover(item: $model.newMilestone) { m in MilestoneSheet(milestone: m) }

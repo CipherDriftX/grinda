@@ -226,6 +226,28 @@ final class APIClient {
         let _: Ok = try await send("functions/v1/submit-dispute", body: Body(raceId: raceID, date: date, note: note, imageBase64: image?.base64EncodedString()))
     }
 
+    struct HostPurseRequest: Encodable {
+        let name: String
+        let kind: String
+        let dailyGoal: Int
+        let days: Int
+        let entryUnits: Int
+        let currency: String
+        let startsAt: Date
+    }
+
+    struct HostPurseReply: Decodable {
+        let purse: Purse
+        /// Set when a public purse's host fee needs a card (Vault first, free
+        /// once a month with Pro).
+        let payment: CreateStakeReply?
+    }
+
+    /// Creates a member purse. The server picks the code.
+    func hostPurse(_ body: HostPurseRequest) async throws -> HostPurseReply {
+        try await send("functions/v1/host-purse", body: body)
+    }
+
     func submitPost(url: String, platform: String) async throws {
         struct Body: Encodable { let url: String; let platform: String }
         struct Ok: Decodable { let ok: Bool }

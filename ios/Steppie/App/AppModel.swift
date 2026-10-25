@@ -490,7 +490,7 @@ final class AppModel {
     // MARK: Entering races
 
     enum EnterError: LocalizedError {
-        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, overDailyLimit, badCode
+        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, overDailyLimit, badCode, badLink
 
         var errorDescription: String? {
             switch self {
@@ -502,6 +502,7 @@ final class AppModel {
             case .notEnoughToCashOut: "You can cash out from \(Money(cents: CashOut.minimumCents, currency: Money.localCurrency).formatted)."
             case .overDailyLimit: "Cash-outs are limited to \(Money(cents: CashOut.dailyLimitCents, currency: Money.localCurrency).formatted) a day."
             case .badCode: "That code doesn't look right. Codes look like SAM-4821."
+            case .badLink: "That link doesn't look right. Paste the full link to your post."
             }
         }
     }
@@ -697,6 +698,48 @@ final class AppModel {
                                   amount: Money(cents: Invite.newMemberCreditCents, currency: currency), reference: "inv_\(code)"), at: 0)
         persist()
         Haptics.success()
+    }
+
+    /// Sends a post link for review. Views are counted by a person, then paid
+    /// to the Vault at $1 per 1,000, up to $600 a post.
+    func submitPost(url raw: String, platform: String) async throws {
+        let url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let u = URL(string: url), u.scheme?.hasPrefix("http") == true, u.host != nil else { throw EnterError.badLink }
+        if !isDemo && api.isConfigured {
+            try await api.submitPost(url: url, platform: platform)
+        } else {
+            try await Task.sleep(for: .milliseconds(800))
+        }
+        Haptics.success()
+    }
+
+    /// Starts a member purse. Crew purses are private (code only, up to 12
+    /// people). Host purses are public and pay the host 5% on top of entries.
+    /// Returns nil if the person closed the payment sheet.
+    func hostPurse(name raw: String, kind: PurseKind, dailyGoal: Int, days: Int, entryUnits: Int, startsAt: Date) async throws -> Purse? {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !profile.isSignedIn && !isDemo { throw EnterError.needsSignIn }
+        var p: Purse
+        if !isDemo && api.isConfigured {
+            let reply = try await api.hostPurse(.init(name: name, kind: kind.rawValue, dailyGoal: dailyGoal, days: days,
+                                                      entryUnits: entryUnits, currency: currency, startsAt: startsAt))
+            if let pay = reply.payment {
+                guard try await payments.pay(pay, currency: currency, label: "Pay host fee") == .paid else { return nil }
+            }
+            p = reply.purse
+        } else {
+            try await Task.sleep(for: .milliseconds(700))
+            let host = profile.displayName ?? "You"
+            p = Purse(id: "member-\(UUID().uuidString.prefix(8).lowercased())", name: name,
+                      tagline: kind == .crew ? "A private purse for \(host)'s crew." : "Hosted by \(host).",
+                      kind: kind, art: kind == .crew ? .crew : .megaphone, dailyGoal: dailyGoal, days: days,
+                      entryUnits: entryUnits, currency: currency, startsAt: startsAt,
+                      entrants: 0, stillIn: 0, onPace: 0, hostName: host,
+                      code: Invite.makeCode(name: name), cap: kind == .crew ? 12 : nil)
+        }
+        purses.append(p)
+        Haptics.success()
+        return p
     }
 
     /// Sends a Health screenshot for a day that was marked missed. A person reviews it.

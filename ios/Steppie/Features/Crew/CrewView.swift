@@ -237,18 +237,20 @@ struct PayoutsList: View {
     }
 }
 
-/// How many missed a day this week. A number, never a list of names.
+/// Accounts removed for fake steps. A number, never a list of names.
 struct BenchNote: View {
     let count: Int
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            CharacterView(who: .shelly, mood: .calm)
-                .frame(width: 44, height: 50)
+            Image(systemName: "hand.raised.fill")
+                .font(.title3)
+                .foregroundStyle(Palette.inkSecondary)
+                .frame(width: 32)
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(count.formatted()) on the bench this week")
+                Text("\(count.formatted()) on the bench")
                     .font(.system(.subheadline, weight: .bold))
-                Text("They missed a day, so their entries stay in the purse for the finishers. We never show who. A Shield would have saved most of them.")
+                Text("Accounts removed for fake steps (shakers, step apps, borrowed phones). Their entries stay in the purse for the people who walked. We never post who.")
                     .font(.footnote)
                     .foregroundStyle(Palette.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)

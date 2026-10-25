@@ -78,6 +78,48 @@ private struct Passbook: View {
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)
+
+            Rectangle()
+                .fill(Palette.hairline)
+                .frame(height: 1)
+                .overlay(Rectangle().stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4])).foregroundStyle(Palette.tyvek))
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("READY TO CASH OUT")
+                            .font(BrandFont.label(11))
+                            .foregroundStyle(Palette.inkSecondary)
+                        Text(model.vault.formatted)
+                            .font(BrandFont.numerals(34, relativeTo: .title))
+                            .foregroundStyle(Palette.ink)
+                            .contentTransition(.numericText())
+                    }
+                    Spacer()
+                    if model.profile.creditCents > 0 {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("ENTRY CREDIT")
+                                .font(BrandFont.label(11))
+                                .foregroundStyle(Palette.inkSecondary)
+                            Text(model.credit.formatted)
+                                .font(BrandFont.numerals(22, relativeTo: .title3))
+                                .foregroundStyle(Palette.ink)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                Button { model.showingCashOut = true } label: {
+                    Label("Cash out", systemImage: "arrow.down.to.line")
+                }
+                .buttonStyle(.primary)
+                Text(model.profile.vaultCents >= CashOut.minimumCents
+                     ? "Split winnings land here. Use them for your next entry, or cash out to your bank or PayPal."
+                     : "Split winnings land here. You can cash out from \(Money(cents: CashOut.minimumCents, currency: model.currency).formatted).")
+                    .font(.caption)
+                    .foregroundStyle(Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
         }
         .background(Palette.tyvek)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
