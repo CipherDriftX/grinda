@@ -19,15 +19,18 @@ struct PaywallView: View {
                     .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(.white)
                 VStack(alignment: .leading, spacing: 14) {
-                    ProLine(symbol: "slider.horizontal.3", text: "Build your own races: any goal, any length")
-                    ProLine(symbol: "square.stack.3d.up", text: "Run up to 3 races at once")
-                    ProLine(symbol: "person.2", text: "Race friends, each on your own stake")
+                    ProLine(symbol: "percent", text: "No service fee on any purse entry")
+                    ProLine(symbol: "gift", text: "$10 of entry credit every month")
+                    ProLine(symbol: "square.stack.3d.up", text: "Run up to 5 races and purses at once")
+                    ProLine(symbol: "megaphone", text: "Host one public purse a month free, and earn 5% of entries")
+                    ProLine(symbol: "slider.horizontal.3", text: "Build your own solo races: any goal, any length")
                     ProLine(symbol: "chart.xyaxis.line", text: "Pace, best hours and weight projection")
-                    ProLine(symbol: "app.badge", text: "The Stride S icon for your home screen")
+                    ProLine(symbol: "crown", text: "The gold mane badge and the Stride S app icon")
                 }
-                Text("Pro is more ways to finish. Every stake still comes back in full when you do.")
+                Text("Pro never touches purse money. Finishers still split all of it, Pro or not.")
                     .font(.subheadline)
                     .foregroundStyle(Palette.onFieldSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
