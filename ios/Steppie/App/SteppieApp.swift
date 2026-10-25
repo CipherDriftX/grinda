@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 @main
 struct SteppieApp: App {
@@ -48,6 +49,7 @@ struct RootView: View {
 
 struct MainTabs: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         @Bindable var model = model
@@ -76,8 +78,21 @@ struct MainTabs: View {
         .sheet(isPresented: $model.showingCashOut) { CashOutSheet() }
         .sheet(isPresented: $model.showingHostPurse) { HostPurseSheet() }
         .fullScreenCover(isPresented: $model.showingShoeBox) { ShoeBoxSheet() }
-        .fullScreenCover(item: $model.celebrating) { race in FinishView(race: race) }
+        .fullScreenCover(item: $model.celebrating, onDismiss: askForRating) { race in FinishView(race: race) }
         .fullScreenCover(item: $model.newMilestone) { m in MilestoneSheet(milestone: m) }
+    }
+}
+
+extension MainTabs {
+    /// Right after a finish closes, the happiest moment, ask once for a rating.
+    /// Apple limits how often the prompt really shows.
+    fileprivate func askForRating() {
+        guard model.askForRating, !model.isDemo else { return }
+        model.askForRating = false
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            requestReview()
+        }
     }
 }
 

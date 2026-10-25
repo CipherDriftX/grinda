@@ -15,6 +15,7 @@ struct FinishView: View {
 
     /// The ladder: after a finish, the next race suggests one rung up.
     private var nextLabel: String {
+        if race.isPurse { return "Find your next purse" }
         guard let s = stake else { return "Now put something on it" }
         let next = Money(units: StakeLadder.next(after: s.units), currency: s.currency)
         return "Level up: race for \(next.formatted)"
@@ -22,13 +23,28 @@ struct FinishView: View {
 
     private var stake: Money? { race.stake }
 
+    /// Purse races pay a split, not the entry back. Known once it settles.
+    private var split: Money? {
+        guard let s = stake, let cents = race.purse?.payoutCents, cents > 0 else { return nil }
+        return Money(cents: cents, currency: s.currency)
+    }
+
+    /// Before settling: the split if the purse settled right now.
+    private var splitNow: Money? {
+        guard race.purse != nil, split == nil, let id = race.purse?.purseID, let p = model.purse(id) else { return nil }
+        return p.livePayout
+    }
+
+    /// What the big number counts to.
+    private var headline: Money? { split ?? splitNow ?? (race.isPurse ? nil : stake) }
+
     var body: some View {
         ZStack {
             Palette.field.ignoresSafeArea()
             RaysBackground(opacity: broken ? 0.09 : 0)
                 .animation(.easeOut(duration: 0.8), value: broken)
             if broken { ConfettiBurst(count: 120) }
-            if broken && stake != nil { CoinRain(count: 30) }
+            if broken && headline != nil { CoinRain(count: split != nil ? 44 : 30) }
             VStack(spacing: 0) {
                 Spacer(minLength: 24)
                 FinishTape(broken: broken)
@@ -38,7 +54,7 @@ struct FinishView: View {
                     CharacterView(who: .bo, mood: broken ? .cheer : .happy, pose: broken ? .wave : .idle)
                         .frame(width: 84, height: 96)
                         .offset(x: -116)
-                        .opacity(revealed && stake != nil ? 1 : 0)
+                        .opacity(revealed && headline != nil ? 1 : 0)
                     CharacterView(who: .dash, mood: .wink, pose: .wave)
                         .frame(width: 80, height: 92)
                         .offset(x: 116)
@@ -74,13 +90,15 @@ struct FinishView: View {
 
     private var amount: some View {
         VStack(spacing: 0) {
-            if let stake {
-                Text(Money(cents: shownAmount, currency: stake.currency).formatted)
+            if let headline {
+                Text((splitNow != nil ? "≈ " : "") + Money(cents: shownAmount, currency: headline.currency).formatted)
                     .font(BrandFont.numerals(96))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText(value: Double(shownAmount)))
                     .monospacedDigit()
-                Text("BACK TO YOU")
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                Text(split != nil ? "YOUR SPLIT" : splitNow != nil ? "YOUR SPLIT IF IT SETTLED NOW" : "BACK TO YOU")
                     .font(BrandFont.label(18))
                     .kerning(2)
                     .foregroundStyle(Palette.volt)
@@ -95,6 +113,14 @@ struct FinishView: View {
 
     private var detail: String {
         guard let stake else { return "Practice lap done. Imagine that with something on the line." }
+        if let split {
+            let profit = Money(cents: split.cents - stake.cents, currency: stake.currency)
+            let who = race.purse?.finishers.map { "\($0.formatted()) people finished and split the purse. " } ?? ""
+            return "\(who)You put in \(stake.formatted) and took home \(split.formatted)\(profit.cents > 0 ? ", \(profit.formatted) profit" : ""). It's in your Vault."
+        }
+        if race.isPurse {
+            return "You're in the split. The purse settles \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour())), after late syncs land, and your share goes straight to your Vault."
+        }
         let card = race.cardLast4.map { " ending \($0)" } ?? ""
         return race.usesHold
             ? "The \(stake.formatted) hold on your card\(card) is released. Nothing was charged."
@@ -151,6 +177,7 @@ struct FinishView: View {
             }
             .buttonStyle(.volt)
             Button(nextLabel) {
+                model.racesMode = race.isPurse ? .purses : .solo
                 model.tab = .races
                 dismiss()
             }
@@ -168,7 +195,7 @@ struct FinishView: View {
         try? await Task.sleep(for: .milliseconds(600))
         Haptics.success()
         withAnimation(reduceMotion ? .easeOut(duration: 0.2) : Motion.snap) { broken = true }
-        guard let stake else {
+        guard let stake = headline else {
             withAnimation(Motion.standard.delay(0.2)) { revealed = true }
             await countGrit()
             return
@@ -177,9 +204,10 @@ struct FinishView: View {
         if reduceMotion {
             shownAmount = stake.cents
         } else {
-            let steps = 14
+            let steps = split != nil ? 24 : 14
             for i in 1...steps {
                 withAnimation(.snappy(duration: 0.12)) { shownAmount = stake.cents * i / steps }
+                if i % 4 == 0 { Haptics.tick() }
                 try? await Task.sleep(for: .milliseconds(45))
             }
             Haptics.pin()
