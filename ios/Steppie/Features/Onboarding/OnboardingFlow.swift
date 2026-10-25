@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum OnboardingStep: Int, CaseIterable {
-    case welcome, cast, why, body, health, baseline, how, starter, notifications
+    case welcome, cast, why, body, health, baseline, how, starter, code, notifications
 }
 
 /// First run. Builds the internal trigger (your why), connects Health, sets a
@@ -31,7 +31,8 @@ struct OnboardingFlow: View {
                     case .health: HealthStep { go(.baseline) }
                     case .baseline: BaselineStep { go(.how) }
                     case .how: HowStep { go(.starter) }
-                    case .starter: StarterKitStep { go(.notifications) }
+                    case .starter: StarterKitStep { go(.code) }
+                    case .code: CodeStep { go(.notifications) }
                     case .notifications: NotificationsStep { finish() }
                     }
                 }
@@ -162,14 +163,14 @@ private struct WelcomeStep: View {
                 .opacity(shown ? 1 : 0)
                 .offset(y: shown ? 0 : 24)
             }
-            Text("Back yourself.\nKeep your money.")
+            Text("Get paid\nto walk.")
                 .font(.system(size: 42, weight: .heavy))
                 .kerning(-0.8)
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 14)
                 .opacity(shown ? 1 : 0)
-            Text("Put money on your daily walk. Hit your steps and every cent comes back. It's the push that finally makes the weight come off.")
+            Text("Join a purse with thousands of walkers. Hit your steps every day and split the whole purse with everyone who finishes.")
                 .font(.title3)
                 .foregroundStyle(Palette.onFieldSecondary)
                 .padding(.top, 12)
@@ -498,14 +499,71 @@ private struct HowStep: View {
     var body: some View {
         StepScaffold(title: "How it works", subtitle: "Three steps. No fine print.", cta: "Got it", grin: .proud, action: next) {
             VStack(spacing: 12) {
-                HowRow(n: "1", title: "Pin a bib", text: "Choose a race and a stake. Short races are only a hold on your card, never a charge if you finish.")
-                HowRow(n: "2", title: "Walk your laps", text: "Your iPhone or watch counts. We nudge you once in the evening if you're behind, never more.")
-                HowRow(n: "3", title: "Get it all back", text: "Finish and your money is back within minutes of settling. Every cent is visible in your Wallet.")
+                HowRow(n: "1", title: "Join a purse", text: "Everyone pays the same entry into one purse. You see the total and what a finisher gets before you pay.")
+                HowRow(n: "2", title: "Walk every day", text: "Your iPhone or watch counts. Steps that sync late still count for 24 hours. We nudge you in the evening only if you're behind.")
+                HowRow(n: "3", title: "Split the purse", text: "Finish every day and you split all of it with the other finishers, straight to your Vault. Cash out from $25.")
             }
-            Text("Miss, and the stake is kept. That's the deal that makes it work, and why people with money on the line finish about three times in four.")
+            Text("Miss a day and your entry stays in for the finishers. That's what makes the split worth it. Rather go solo? Solo races give your own stake back when you finish.")
                 .font(.footnote)
                 .foregroundStyle(Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A friend's code: $5 of entry credit now, $5 for them later. Skippable.
+private struct CodeStep: View {
+    let next: () -> Void
+    @Environment(AppModel.self) private var model
+    @State private var code = ""
+    @State private var error: String?
+    @State private var done = false
+    @State private var shake = 0
+
+    var body: some View {
+        StepScaffold(title: done ? "$5 is yours" : "Got a friend's code?",
+                     subtitle: done ? "It's in your Vault as entry credit. Your friend gets $5 when you join your first purse."
+                                    : "Enter it and you both get $5. No code? Skip it, you can add one later in Crew.",
+                     cta: done ? "Next" : "Use code", ctaEnabled: done || code.count >= 4,
+                     secondary: done ? nil : ("Skip", next), grin: done ? .cheer : nil,
+                     action: { done ? next() : redeem() }) {
+            if done {
+                ZStack {
+                    ConfettiBurst(count: 60)
+                    CharacterView(who: .dash, mood: .cheer, pose: .cheer, hop: 1)
+                        .frame(width: 120, height: 138)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                TextField("SAM-4821", text: $code)
+                    .font(BrandFont.numerals(34, relativeTo: .title))
+                    .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .padding(.vertical, 16)
+                    .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(error == nil ? Palette.hairline : Palette.risk, lineWidth: 1.5)
+                    }
+                    .shake(shake)
+                    .accessibilityLabel("Friend's code")
+                if let error {
+                    Text(error).font(.footnote).foregroundStyle(Palette.risk)
+                }
+            }
+        }
+    }
+
+    private func redeem() {
+        Task {
+            do {
+                try await model.redeemInvite(code)
+                withAnimation(Motion.snap) { done = true; error = nil }
+            } catch {
+                Haptics.warning()
+                withAnimation(Motion.standard) { self.error = error.localizedDescription; shake += 1 }
+            }
         }
     }
 }

@@ -107,6 +107,7 @@ struct DemoRouter: View {
         case "onboarding-baseline": OnboardingFlow(start: .baseline)
         case "onboarding-how": OnboardingFlow(start: .how)
         case "onboarding-invites": OnboardingFlow(start: .notifications)
+        case "onboarding-code": OnboardingFlow(start: .code)
         case "races": MainTabs().onAppear { model.tab = .races }
         case "league", "crew": MainTabs().onAppear { model.tab = .crew }
         case "today-new": MainTabs().onAppear { model.races.removeAll { $0.status.isLive } }

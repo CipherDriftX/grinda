@@ -696,7 +696,8 @@ final class AppModel {
     func redeemInvite(_ raw: String) async throws {
         let code = raw.trimmingCharacters(in: .whitespaces).uppercased()
         guard Invite.isValid(code), code != profile.inviteCode, profile.invitedBy == nil else { throw EnterError.badCode }
-        if !isDemo && api.isConfigured { try await api.redeemInvite(code: code) }
+        // Before sign-in (onboarding) the code waits here and is sent right after.
+        if !isDemo && api.isConfigured && profile.isSignedIn { try await api.redeemInvite(code: code) }
         profile.invitedBy = code
         profile.creditCents += Invite.newMemberCreditCents
         ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Code \(code)", kind: .credit,
@@ -779,6 +780,9 @@ final class AppModel {
         profile.appleUserID = appleUserID
         if let name, !name.isEmpty { profile.displayName = name }
         persist()
+        if let code = profile.invitedBy, !isDemo, api.isConfigured {
+            Task { try? await api.redeemInvite(code: code) }
+        }
     }
 
     func deleteAccount() async {
