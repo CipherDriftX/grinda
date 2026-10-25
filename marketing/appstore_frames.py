@@ -19,15 +19,16 @@ COBALT, VOLT = "#1F4FD8", "#C8F03C"
 
 FRAMES = [
     # file, line 1, line 2 (volt), who pops out of the frame (None when the screen already shows them), mood, side
+    ("purses", "GET PAID", "TO WALK.", None, None, "left"),
+    ("purse-live", "THE PURSE.", "LIVE.", "steppie", "focus", "right"),
+    ("purse-join", "EVERY CENT,", "BEFORE YOU PIN.", None, None, "left"),
     ("today", "STEPPIE RUNS", "YOUR LAPS.", None, None, "left"),
-    ("contract", "BACK YOURSELF.", "PICK YOUR TABLE.", "steppie", "focus", "right"),
-    ("entered", "BIB PINNED.", "GAME ON.", None, None, "left"),
-    ("finish", "FINISH.", "KEEP EVERY CENT.", None, None, "left"),
-    ("comeback", "MISSED A DAY?", "COME BACK.", "steppie", "focus", "right"),
-    ("league", "CLIMB THE", "WEEKLY LEAGUE.", None, None, "left"),
+    ("finish-purse", "FINISH.", "SPLIT THE PURSE.", None, None, "left"),
+    ("invite", "BRING A FRIEND.", "$5 EACH.", None, None, "right"),
+    ("paid-to-post", "POST ABOUT IT.", "GET PAID.", None, None, "left"),
     ("shields", "BAD DAY?", "SHELLY'S GOT IT.", None, None, "right"),
+    ("cash-out", "CASH OUT", "FROM $25.", None, None, "left"),
     ("shoebox-open", "EVERY FINISH:", "NEW KICKS.", None, None, "left"),
-    ("wallet", "EVERY CENT.", "IN THE VAULT.", None, None, "right"),
 ]
 
 
@@ -88,5 +89,8 @@ def frame(name, l1, l2, who, mood, side, idx):
 
 
 if __name__ == "__main__":
+    for old in os.listdir(OUT):
+        if old.endswith(".png"):
+            os.remove(os.path.join(OUT, old))
     for i, f in enumerate(FRAMES, 1):
         frame(*f, idx=i)
