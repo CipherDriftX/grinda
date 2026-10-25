@@ -36,6 +36,19 @@ final class StoreService {
         return false
     }
 
+    /// When a free trial ends, if the person is in one and it will renew.
+    static func trialEnd() async -> Date? {
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let t) = result, productIDs.contains(t.productID), t.revocationDate == nil,
+                  t.offerType == .introductory, let end = t.expirationDate, end > .now else { continue }
+            if let status = try? await t.subscriptionStatus, case .verified(let info) = status.renewalInfo, !info.willAutoRenew {
+                return nil
+            }
+            return end
+        }
+        return nil
+    }
+
     static func shieldProducts() async -> [Product] {
         ((try? await Product.products(for: shieldIDs)) ?? []).sorted { $0.price < $1.price }
     }

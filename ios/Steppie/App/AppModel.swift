@@ -102,6 +102,9 @@ final class AppModel {
 
     func purse(_ id: String) -> Purse? { purses.first { $0.id == id } }
 
+    /// The purse behind today's main race, if it is one.
+    var livePurse: Purse? { primaryRace?.purse.flatMap { purse($0.purseID) } }
+
     /// Your race in this purse, if you're in it.
     func entry(in p: Purse) -> Race? {
         races.first { $0.purse?.purseID == p.id && $0.status != .cancelled }
@@ -380,8 +383,10 @@ final class AppModel {
                 hasLiveStake: liveRaces.contains { !$0.isPractice }, invites: profile.invitesEnabled,
                 anchor: funnelAnchor, comebackDeadline: comebackOffer.map { comebackDeadline($0) },
                 comebackStake: comebackOffer?.stake, shadow: shadowWeek, shields: profile.shields,
-                suggested: suggestedStake(for: RaceTemplate.board[0]).map { Money(units: $0, currency: currency) }
+                suggested: suggestedStake(for: RaceTemplate.board[0]).map { Money(units: $0, currency: currency) },
+                purseName: livePurse?.name, purseTotal: livePurse?.pot
             ))
+            if !isDemo { NotificationService.planTrialReminder(endsAt: await StoreService.trialEnd()) }
         }
         if !isDemo { await syncRaces() }
     }

@@ -7,11 +7,15 @@ import UserNotifications
 ///    after onboarding or the last finish), each built on a different, honest
 ///    reason to start: a fresh start (Mondays, the 1st), your own shadow week, a
 ///    real comeback deadline, a Shield waiting in the locker.
-/// 2. **Pace nudge** (while a stake is live). One evening check, only if you're
-///    behind, cancelled the moment the goal is hit. Once money is down the app
-///    goes quiet and lets you walk.
+/// 2. **Pace nudge** (while a stake is live). An evening check and a 10 pm
+///    last call, only if you're behind, cancelled the moment the goal is hit.
+///    Once money is down the app goes quiet and lets you walk.
+///
+/// Separately, a trial reminder two days before a Pro trial turns paid.
 enum NotificationService {
     static let paceID = "steppie.pace"
+    static let lastCallID = "steppie.pace.late"
+    static let trialID = "steppie.trial"
     static let invitePrefix = "steppie.invite."
 
     struct Plan {
@@ -26,6 +30,9 @@ enum NotificationService {
         var shadow: (hits: Int, days: Int)
         var shields: Int
         var suggested: Money?
+        /// The live purse, if the race at stake is one.
+        var purseName: String? = nil
+        var purseTotal: Money? = nil
     }
 
     static let cadence = [0, 1, 2, 4, 7, 10, 14, 21, 28]
@@ -38,9 +45,10 @@ enum NotificationService {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { pending in
             let old = pending.map(\.identifier).filter { $0.hasPrefix(invitePrefix) }
-            center.removePendingNotificationRequests(withIdentifiers: old + [paceID])
+            center.removePendingNotificationRequests(withIdentifiers: old + [paceID, lastCallID])
             if p.hasLiveStake {
                 planPaceCheck(p)
+                planLastCall(p)
             } else if p.invites {
                 planInvites(p)
             }
@@ -60,7 +68,10 @@ enum NotificationService {
         let minutes = Estimate.minutes(steps: left)
 
         let content = UNMutableNotificationContent()
-        if let stake = p.stake {
+        if let name = p.purseName, let total = p.purseTotal {
+            content.title = "Steppie's lacing up 🦁"
+            content.body = "About \(left.formatted()) steps keeps you in \(name), a \(total.formatted) purse. A \(minutes)-minute walk does it."
+        } else if let stake = p.stake {
             content.title = "Steppie's lacing up 🦁"
             content.body = "About \(left.formatted()) steps keeps your \(stake.formatted). A \(minutes)-minute walk does it."
         } else {
@@ -70,6 +81,41 @@ enum NotificationService {
         content.sound = .default
         content.interruptionLevel = .timeSensitive
         add(paceID, content, at: fire)
+    }
+
+    /// 10 pm: the real number left, two hours before the day closes.
+    private static func planLastCall(_ p: Plan) {
+        guard p.steps < p.goal else { return }
+        let cal = Calendar.current
+        guard let fire = cal.date(bySettingHour: 22, minute: 0, second: 0, of: .now), fire > .now else { return }
+        let projected = Int(Double(p.steps) * 1.12)
+        let left = max(p.goal - projected, 300)
+        let content = UNMutableNotificationContent()
+        content.title = "Two hours left today ⏱"
+        if let name = p.purseName {
+            content.body = "Around \(left.formatted()) steps to stay in \(name). Walking around the house counts. Late syncs count for 24 hours."
+        } else if let stake = p.stake {
+            content.body = "Around \(left.formatted()) steps to keep your \(stake.formatted). Walking around the house counts."
+        } else {
+            content.body = "Around \(left.formatted()) steps to close today."
+        }
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+        add(lastCallID, content, at: fire)
+    }
+
+    // MARK: Trial
+
+    /// Two days before a Pro trial turns paid, say so plainly.
+    static func planTrialReminder(endsAt: Date?) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [trialID])
+        guard let endsAt, let fire = Calendar.current.date(byAdding: .day, value: -2, to: endsAt), fire > .now else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Your Pro trial ends \(endsAt.formatted(.dateTime.weekday(.wide)))"
+        content.body = "After that it renews as a paid plan. Want to keep it? Do nothing. Not for you? Cancel in Settings › Apple ID › Subscriptions and you won't be charged."
+        content.sound = .default
+        add(trialID, content, at: fire)
     }
 
     // MARK: Invites (nothing staked)
