@@ -20,44 +20,162 @@ The name Steppie is a working name. How purses work, and how they map to Steppa'
 
 ## The app
 
+**Getting started**
+
 <p align="center">
-  <img src="screenshots/light/onboarding-welcome.png" width="200">
-  <img src="screenshots/light/today.png" width="200">
-  <img src="screenshots/light/purses.png" width="200">
-  <img src="screenshots/light/purse.png" width="200">
+  <img src="screenshots/light/onboarding-welcome.png" width="180" alt="onboarding-welcome">
+  <img src="screenshots/light/cast.png" width="180" alt="cast">
+  <img src="screenshots/light/onboarding-how.png" width="180" alt="onboarding-how">
+  <img src="screenshots/light/onboarding-code.png" width="180" alt="onboarding-code">
 </p>
+
+**Purses**
+
 <p align="center">
-  <img src="screenshots/light/purse-live.png" width="200">
-  <img src="screenshots/light/purse-join.png" width="200">
-  <img src="screenshots/light/purse-entered.png" width="200">
-  <img src="screenshots/light/finish-purse.png" width="200">
+  <img src="screenshots/light/purses.png" width="240" alt="purses">
+  <img src="screenshots/light/purse.png" width="240" alt="purse">
+  <img src="screenshots/light/purse-live.png" width="240" alt="purse-live">
 </p>
+
 <p align="center">
-  <img src="screenshots/light/crew.png" width="200">
-  <img src="screenshots/light/invite.png" width="200">
-  <img src="screenshots/light/paid-to-post.png" width="200">
-  <img src="screenshots/light/wallet.png" width="200">
+  <img src="screenshots/light/purse-join.png" width="240" alt="purse-join">
+  <img src="screenshots/light/purse-entered.png" width="240" alt="purse-entered">
+  <img src="screenshots/light/finish-purse.png" width="240" alt="finish-purse">
 </p>
+
+**Every day**
+
 <p align="center">
-  <img src="screenshots/light/cash-out.png" width="200">
-  <img src="screenshots/light/host-purse.png" width="200">
-  <img src="screenshots/light/dispute.png" width="200">
-  <img src="screenshots/light/shoebox-open.png" width="200">
+  <img src="screenshots/light/today.png" width="240" alt="today">
+  <img src="screenshots/light/today-new.png" width="240" alt="today-new">
+  <img src="screenshots/light/shields.png" width="240" alt="shields">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/progress.png" width="240" alt="progress">
+  <img src="screenshots/light/dispute.png" width="240" alt="dispute">
+  <img src="screenshots/light/comeback.png" width="240" alt="comeback">
+</p>
+
+**Solo races**
+
+<p align="center">
+  <img src="screenshots/light/solo.png" width="240" alt="solo">
+  <img src="screenshots/light/contract.png" width="240" alt="contract">
+  <img src="screenshots/light/pinning.png" width="240" alt="pinning">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/entered.png" width="240" alt="entered">
+  <img src="screenshots/light/finish.png" width="240" alt="finish">
+  <img src="screenshots/light/shoebox-open.png" width="240" alt="shoebox-open">
+</p>
+
+**Crew and the Vault**
+
+<p align="center">
+  <img src="screenshots/light/crew.png" width="240" alt="crew">
+  <img src="screenshots/light/invite.png" width="240" alt="invite">
+  <img src="screenshots/light/paid-to-post.png" width="240" alt="paid-to-post">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/wallet.png" width="240" alt="wallet">
+  <img src="screenshots/light/cash-out.png" width="240" alt="cash-out">
+  <img src="screenshots/light/host-purse.png" width="240" alt="host-purse">
 </p>
 
 <p align="center"><img src="screenshots/pinning.gif" width="260" alt="Hold to pin your bib"><br><em>The signature interaction: hold to pin your bib.</em></p>
 
-These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode. The data is synthetic. Dark mode versions are in [`screenshots/dark`](screenshots/dark).
+These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode. All names, steps and money in them are demo data.
+
+<details>
+<summary><b>Dark mode</b></summary>
+
+**Getting started**
+
+<p align="center">
+  <img src="screenshots/dark/onboarding-welcome.png" width="150" alt="onboarding-welcome">
+  <img src="screenshots/dark/cast.png" width="150" alt="cast">
+  <img src="screenshots/dark/onboarding-how.png" width="150" alt="onboarding-how">
+  <img src="screenshots/dark/onboarding-code.png" width="150" alt="onboarding-code">
+</p>
+
+**Purses**
+
+<p align="center">
+  <img src="screenshots/dark/purses.png" width="200" alt="purses">
+  <img src="screenshots/dark/purse.png" width="200" alt="purse">
+  <img src="screenshots/dark/purse-live.png" width="200" alt="purse-live">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/purse-join.png" width="200" alt="purse-join">
+  <img src="screenshots/dark/purse-entered.png" width="200" alt="purse-entered">
+  <img src="screenshots/dark/finish-purse.png" width="200" alt="finish-purse">
+</p>
+
+**Every day**
+
+<p align="center">
+  <img src="screenshots/dark/today.png" width="200" alt="today">
+  <img src="screenshots/dark/today-new.png" width="200" alt="today-new">
+  <img src="screenshots/dark/shields.png" width="200" alt="shields">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/progress.png" width="200" alt="progress">
+  <img src="screenshots/dark/dispute.png" width="200" alt="dispute">
+  <img src="screenshots/dark/comeback.png" width="200" alt="comeback">
+</p>
+
+**Solo races**
+
+<p align="center">
+  <img src="screenshots/dark/solo.png" width="200" alt="solo">
+  <img src="screenshots/dark/contract.png" width="200" alt="contract">
+  <img src="screenshots/dark/pinning.png" width="200" alt="pinning">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/entered.png" width="200" alt="entered">
+  <img src="screenshots/dark/finish.png" width="200" alt="finish">
+  <img src="screenshots/dark/shoebox-open.png" width="200" alt="shoebox-open">
+</p>
+
+**Crew and the Vault**
+
+<p align="center">
+  <img src="screenshots/dark/crew.png" width="200" alt="crew">
+  <img src="screenshots/dark/invite.png" width="200" alt="invite">
+  <img src="screenshots/dark/paid-to-post.png" width="200" alt="paid-to-post">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/wallet.png" width="200" alt="wallet">
+  <img src="screenshots/dark/cash-out.png" width="200" alt="cash-out">
+  <img src="screenshots/dark/host-purse.png" width="200" alt="host-purse">
+</p>
+
+</details>
 
 ### App Store screenshots
 
+Framed by [`marketing/appstore_frames.py`](marketing/appstore_frames.py) from the captures above.
+
 <p align="center">
-  <img src="ios/fastlane/screenshots/en-US/01_today.png" width="130">
-  <img src="ios/fastlane/screenshots/en-US/02_contract.png" width="130">
-  <img src="ios/fastlane/screenshots/en-US/03_entered.png" width="130">
-  <img src="ios/fastlane/screenshots/en-US/04_finish.png" width="130">
-  <img src="ios/fastlane/screenshots/en-US/05_comeback.png" width="130">
-  <img src="ios/fastlane/screenshots/en-US/06_league.png" width="130">
+  <img src="ios/fastlane/screenshots/en-US/01_purses.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/02_purse-live.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/03_purse-join.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/04_today.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/05_finish-purse.png" width="150">
+</p>
+<p align="center">
+  <img src="ios/fastlane/screenshots/en-US/06_invite.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/07_paid-to-post.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/08_shields.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/09_cash-out.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/10_shoebox-open.png" width="150">
 </p>
 
 ## How it makes money
