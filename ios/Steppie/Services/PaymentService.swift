@@ -15,7 +15,7 @@ final class PaymentService {
 
     static let merchantID = "merchant.com.cipherdriftx.steppie"
 
-    func pay(_ reply: APIClient.CreateStakeReply, currency: String) async throws -> Outcome {
+    func pay(_ reply: APIClient.CreateStakeReply, currency: String, label: String? = nil) async throws -> Outcome {
         #if canImport(StripePaymentSheet)
         STPAPIClient.shared.publishableKey = reply.publishableKey
         var config = PaymentSheet.Configuration()
@@ -24,7 +24,7 @@ final class PaymentService {
         config.applePay = .init(merchantId: Self.merchantID, merchantCountryCode: currency == "USD" ? "US" : "DE")
         config.allowsDelayedPaymentMethods = false
         config.returnURL = "steppie://stripe-redirect"
-        config.primaryButtonLabel = reply.captureMethod == "manual" ? "Place hold" : "Pay stake"
+        config.primaryButtonLabel = label ?? (reply.captureMethod == "manual" ? "Place hold" : "Pay stake")
 
         var appearance = PaymentSheet.Appearance()
         appearance.colors.primary = UIColor(Palette.cobalt)

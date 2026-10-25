@@ -137,10 +137,99 @@ final class APIClient {
         let status: String
         let stakeState: String
         let settledAt: Date?
+        var payoutCents: Int? = nil
+        var finishers: Int? = nil
     }
 
     func races() async throws -> [RemoteRace] {
-        try await get("rest/v1/races?select=id,status,stake_state,settled_at&order=created_at.desc")
+        try await get("rest/v1/races?select=id,status,stake_state,settled_at,payout_cents,finishers&order=created_at.desc")
+    }
+
+    // MARK: Purses
+
+    func purses() async throws -> [Purse] {
+        try await get("rest/v1/purse_board?select=*&order=starts_at.asc")
+    }
+
+    struct JoinPurseRequest: Encodable {
+        let purseId: String
+        let timezone: String
+        let birthYear: Int?
+        var shieldsEquipped: Int = 0
+    }
+
+    struct JoinPurseReply: Decodable {
+        let raceId: UUID
+        let bibNumber: Int
+        /// Missing when the Vault balance covered the whole entry.
+        let payment: CreateStakeReply?
+    }
+
+    func joinPurse(_ req: JoinPurseRequest) async throws -> JoinPurseReply {
+        try await send("functions/v1/join-purse", body: req)
+    }
+
+    private struct RemoteRunner: Decodable {
+        let rank: Int
+        let name: String
+        let steps: Int
+        let state: String
+        let isMe: Bool
+    }
+
+    func purseBoard(purseID: String) async throws -> [PurseRunner] {
+        struct Body: Encodable { let purseId: String }
+        let rows: [RemoteRunner] = try await send("rest/v1/rpc/purse_runners", body: Body(purseId: purseID))
+        return rows.map { PurseRunner(rank: $0.rank, name: $0.name, steps: $0.steps, state: PurseRunner.State(rawValue: $0.state) ?? .behind, isMe: $0.isMe) }
+    }
+
+    private struct RemotePayout: Decodable {
+        let name: String
+        let purseName: String
+        let amountCents: Int
+        let profitCents: Int
+        let currency: String
+        let paidAt: Date
+    }
+
+    func payoutFeed() async throws -> [PayoutEvent] {
+        let rows: [RemotePayout] = try await get("rest/v1/payout_feed?select=*&order=paid_at.desc&limit=30", auth: false)
+        return rows.map {
+            PayoutEvent(name: $0.name, purseName: $0.purseName, amount: Money(cents: $0.amountCents, currency: $0.currency),
+                        profit: Money(cents: $0.profitCents, currency: $0.currency), at: $0.paidAt)
+        }
+    }
+
+    func benchTotal() async throws -> Int {
+        struct Row: Decodable { let benched: Int }
+        let rows: [Row] = try await get("rest/v1/bench_total?select=benched", auth: false)
+        return rows.first?.benched ?? 0
+    }
+
+    // MARK: Vault
+
+    func cashOut(cents: Int, method: String) async throws {
+        struct Body: Encodable { let amountCents: Int; let method: String }
+        struct Ok: Decodable { let ok: Bool }
+        let _: Ok = try await send("functions/v1/cash-out", body: Body(amountCents: cents, method: method))
+    }
+
+    func redeemInvite(code: String) async throws {
+        struct Body: Encodable { let code: String }
+        struct Ok: Decodable { let ok: Bool }
+        let _: Ok = try await send("functions/v1/redeem-invite", body: Body(code: code))
+    }
+
+    func submitDispute(raceID: UUID, date: String, note: String, image: Data?) async throws {
+        struct Body: Encodable { let raceId: UUID; let date: String; let note: String; let imageBase64: String? }
+        struct Ok: Decodable { let ok: Bool }
+        let _: Ok = try await send("functions/v1/submit-dispute", body: Body(raceId: raceID, date: date, note: note, imageBase64: image?.base64EncodedString()))
+    }
+
+    func submitPost(url: String, platform: String) async throws {
+        struct Body: Encodable { let url: String; let platform: String }
+        struct Ok: Decodable { let ok: Bool }
+        let _: Ok = try await send("functions/v1/submit-post", body: Body(url: url, platform: platform))
     }
 
     struct RemoteLedger: Decodable {
@@ -160,11 +249,14 @@ final class APIClient {
     struct Me: Decodable {
         let shields: Int
         let league: String
+        var vaultCents: Int? = nil
+        var creditCents: Int? = nil
+        var inviteCode: String? = nil
     }
 
     func me() async throws -> Me? {
         guard let id = session?.userID else { return nil }
-        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league&id=eq.\(id)")
+        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league,vault_cents,credit_cents,invite_code&id=eq.\(id)")
         return rows.first
     }
 

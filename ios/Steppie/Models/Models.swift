@@ -331,6 +331,46 @@ struct Profile: Codable, Hashable {
     }
 }
 
+extension Profile {
+    private enum CodingKeys: String, CodingKey {
+        case why, weightKg, goalWeightKg, dailyGoal, baseline, usesMetric, onboarded, appleUserID, displayName, birthYear
+        case notificationsEnabled, invitesEnabled, onboardedAt, shields, shoes, wearing, unopenedBoxes, weekGrit, league
+        case vaultCents, creditCents, inviteCode, invitedBy, invitesPaid
+    }
+
+    /// Tolerant decoding: fields added in later versions fall back to their
+    /// defaults, so an update never wipes a saved profile.
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func v<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T { (try? c.decodeIfPresent(T.self, forKey: key)) ?? fallback }
+        why = v(.why, why)
+        weightKg = v(.weightKg, weightKg)
+        goalWeightKg = v(.goalWeightKg, goalWeightKg)
+        dailyGoal = v(.dailyGoal, dailyGoal)
+        baseline = v(.baseline, baseline)
+        usesMetric = v(.usesMetric, usesMetric)
+        onboarded = v(.onboarded, onboarded)
+        appleUserID = v(.appleUserID, appleUserID)
+        displayName = v(.displayName, displayName)
+        birthYear = v(.birthYear, birthYear)
+        notificationsEnabled = v(.notificationsEnabled, notificationsEnabled)
+        invitesEnabled = v(.invitesEnabled, invitesEnabled)
+        onboardedAt = v(.onboardedAt, onboardedAt)
+        shields = v(.shields, shields)
+        shoes = v(.shoes, shoes)
+        wearing = v(.wearing, wearing)
+        unopenedBoxes = v(.unopenedBoxes, unopenedBoxes)
+        weekGrit = v(.weekGrit, weekGrit)
+        league = v(.league, league)
+        vaultCents = v(.vaultCents, vaultCents)
+        creditCents = v(.creditCents, creditCents)
+        inviteCode = v(.inviteCode, inviteCode)
+        invitedBy = v(.invitedBy, invitedBy)
+        invitesPaid = v(.invitesPaid, invitesPaid)
+    }
+}
+
 struct DaySteps: Identifiable, Hashable {
     var date: Date
     var steps: Int
