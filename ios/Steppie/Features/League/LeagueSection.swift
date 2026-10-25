@@ -1,33 +1,24 @@
 import SwiftUI
 
 /// The weekly league. Grit comes only from walking on race days (more at
-/// bigger tables), and the top 7 move up on Sunday night.
-struct LeagueView: View {
+/// bigger tables), and the top 7 move up on Sunday night. Lives on Crew.
+struct LeagueSection: View {
     @Environment(AppModel.self) private var model
     private static let medals: [UInt32] = [0xFFB020, 0x9AA3B2, 0xC77B3A]
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    header
-                    if model.leagueBoard.isEmpty {
-                        empty
-                    } else {
-                        board
-                    }
-                    Text("Grit: one point per 100 steps on race days, times your table: Rookie 1.5×, Pacer 2×, Racer 2.5×, Champion 3×, Legend 4×. Practice laps count 1×. Finishing a race adds 100 per day.")
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSecondary)
-                }
-                .padding(16)
-                .padding(.bottom, 24)
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            if model.leagueBoard.isEmpty {
+                empty
+            } else {
+                board
             }
-            .background(Palette.ground)
-            .navigationTitle("League")
-            .task { await model.loadLeague() }
-            .refreshable { await model.loadLeague() }
+            Text("Grit: one point per 100 steps on race days, times your table: Rookie 1.5×, Pacer 2×, Racer 2.5×, Champion 3×, Legend 4×. Practice laps count 1×. Finishing a race adds 100 per day.")
+                .font(.caption)
+                .foregroundStyle(Palette.inkSecondary)
         }
+        .task { await model.loadLeague() }
     }
 
     private var header: some View {

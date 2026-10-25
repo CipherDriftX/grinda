@@ -93,7 +93,7 @@ private struct TodayField: View {
             }
             .buttonStyle(.pressable)
             .accessibilityLabel("\(model.profile.shields) Shields. Open the Shield locker")
-            Button { model.tab = .league } label: {
+            Button { model.tab = .crew } label: {
                 StatChip(symbol: "bolt.fill", value: model.weekGrit.formatted(.number.notation(.compactName)), tint: Palette.volt)
             }
             .buttonStyle(.pressable)

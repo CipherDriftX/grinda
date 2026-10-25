@@ -58,9 +58,9 @@ struct MainTabs: View {
             RacesView()
                 .tabItem { Label("Races", systemImage: "flag.checkered") }
                 .tag(AppTab.races)
-            LeagueView()
-                .tabItem { Label("League", systemImage: "trophy.fill") }
-                .tag(AppTab.league)
+            CrewView()
+                .tabItem { Label("Crew", systemImage: "person.3.fill") }
+                .tag(AppTab.crew)
             ProgressScreen()
                 .tabItem { Label("Progress", systemImage: "chart.line.downtrend.xyaxis") }
                 .tag(AppTab.progress)
@@ -89,7 +89,7 @@ struct DemoRouter: View {
         case "onboarding-how": OnboardingFlow(start: .how)
         case "onboarding-invites": OnboardingFlow(start: .notifications)
         case "races": MainTabs().onAppear { model.tab = .races }
-        case "league": MainTabs().onAppear { model.tab = .league }
+        case "league", "crew": MainTabs().onAppear { model.tab = .crew }
         case "today-new": MainTabs().onAppear { model.races.removeAll { $0.status.isLive } }
         case "comeback": MainTabs().onAppear {
             model.races.removeAll { $0.status.isLive }
