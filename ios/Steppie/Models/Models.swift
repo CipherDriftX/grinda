@@ -154,8 +154,11 @@ struct Race: Identifiable, Codable, Hashable {
     var shieldsEquipped: Int = 0
     /// The missed race this one is a comeback for.
     var comebackOf: UUID? = nil
+    /// Set when this race is an entry in a purse: finishers split the purse.
+    var purse: PurseTicket? = nil
 
     var isPractice: Bool { stake == nil }
+    var isPurse: Bool { purse != nil }
     var isComeback: Bool { comebackOf != nil }
     var tier: StakeTier? { stake.map { StakeTier.tier(units: $0.units) } }
     var missedCount: Int { days.filter { $0.state == .missed }.count }
@@ -188,10 +191,47 @@ struct Race: Identifiable, Codable, Hashable {
     }
 }
 
+// MARK: - Purse entries
+
+/// Steps that only count inside a time of day, like 6 to 9 am.
+struct StepWindow: Codable, Hashable {
+    var startHour: Int
+    var endHour: Int
+
+    /// "6–9 am", "8–11 pm", "11 am–2 pm"
+    var label: String {
+        func h(_ x: Int) -> String { "\(x % 12 == 0 ? 12 : x % 12)" }
+        func half(_ x: Int) -> String { x < 12 || x == 24 ? "am" : "pm" }
+        if half(startHour) == half(endHour) { return "\(h(startHour))–\(h(endHour)) \(half(endHour))" }
+        return "\(h(startHour)) \(half(startHour))–\(h(endHour)) \(half(endHour))"
+    }
+
+    /// Steps from hourly buckets that fall inside the window.
+    func steps(in hourly: [Int]) -> Int {
+        guard hourly.count == 24 else { return 0 }
+        return (max(startHour, 0)..<min(endHour, 24)).reduce(0) { $0 + hourly[$1] }
+    }
+
+    func contains(hour: Int) -> Bool { hour >= startHour && hour < endHour }
+}
+
+/// What a race remembers about the purse it was entered in.
+struct PurseTicket: Codable, Hashable {
+    var purseID: String
+    var entrants: Int
+    var potCents: Int
+    var feeCents: Int
+    var window: StepWindow?
+    /// Filled when the purse settles.
+    var finishers: Int?
+    var payoutCents: Int?
+}
+
 // MARK: - Wallet
 
 enum LedgerKind: String, Codable, Hashable {
     case held, charged, released, refunded, kept, comeback
+    case entry, fee, winnings, cashout, credit, referral, hostFee
 
     var title: String {
         switch self {
@@ -201,10 +241,17 @@ enum LedgerKind: String, Codable, Hashable {
         case .refunded: "Refunded"
         case .kept: "Stake kept"
         case .comeback: "Comeback refund"
+        case .entry: "Purse entry"
+        case .fee: "Service fee"
+        case .winnings: "Purse split"
+        case .cashout: "Cashed out"
+        case .credit: "Entry credit"
+        case .referral: "Invite bonus"
+        case .hostFee: "Host earnings"
         }
     }
 
-    var isReturn: Bool { self == .released || self == .refunded || self == .comeback }
+    var isReturn: Bool { [.released, .refunded, .comeback, .winnings, .referral, .hostFee, .credit].contains(self) }
 }
 
 struct LedgerEntry: Identifiable, Codable, Hashable {
@@ -267,6 +314,15 @@ struct Profile: Codable, Hashable {
     /// Grit this week and the league you're in.
     var weekGrit = 0
     var league: League = .bronze
+    /// The Vault balance you can cash out (purse splits, invite bonuses, host earnings).
+    var vaultCents = 0
+    /// Entry credit: spends on purse entries, can't be cashed out.
+    var creditCents = 0
+    /// Your invite code, and the code you joined with.
+    var inviteCode: String?
+    var invitedBy: String?
+    /// Invites that turned into a first paid entry.
+    var invitesPaid = 0
 
     var isSignedIn: Bool { appleUserID != nil }
     var isAdult: Bool {

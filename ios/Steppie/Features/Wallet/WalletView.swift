@@ -183,6 +183,13 @@ private struct LedgerRow: View {
         case .refunded: "arrow.uturn.backward"
         case .kept: "xmark"
         case .comeback: "arrow.uturn.backward.circle"
+        case .entry: "ticket"
+        case .fee: "percent"
+        case .winnings: "trophy"
+        case .cashout: "arrow.up.right"
+        case .credit: "gift"
+        case .referral: "person.2"
+        case .hostFee: "megaphone"
         }
     }
 
@@ -214,9 +221,9 @@ private struct LedgerRow: View {
 
     private var amountText: String {
         switch entry.kind {
-        case .released, .refunded, .comeback: "+\(entry.amount.formatted)"
+        case .released, .refunded, .comeback, .winnings, .credit, .referral, .hostFee: "+\(entry.amount.formatted)"
         case .held: entry.amount.formatted
-        case .charged, .kept: "−\(entry.amount.formatted)"
+        case .charged, .kept, .entry, .fee, .cashout: "−\(entry.amount.formatted)"
         }
     }
 }
