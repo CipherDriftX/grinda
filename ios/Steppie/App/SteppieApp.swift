@@ -108,7 +108,19 @@ struct DemoRouter: View {
         case "onboarding-how": OnboardingFlow(start: .how)
         case "onboarding-invites": OnboardingFlow(start: .notifications)
         case "onboarding-code": OnboardingFlow(start: .code)
-        case "races": MainTabs().onAppear { model.tab = .races }
+        case "races", "purses": MainTabs().onAppear { model.tab = .races; model.racesMode = .purses }
+        case "solo": MainTabs().onAppear { model.tab = .races; model.racesMode = .solo }
+        case "purse": NavigationStack { PurseDetailView(purseID: "lions-share") }
+        case "purse-live": NavigationStack { PurseDetailView(purseID: DemoSeed.lionsShareLiveID) }
+        case "purse-join": NavigationStack { JoinPurseView(purseID: "lions-share", previewPins: 2) }
+            .onAppear { model.isPro = false; model.races.removeAll { $0.status.isLive } }
+        case "purse-entered": NavigationStack { JoinPurseView(purseID: "lions-share", showEntered: true) }
+        case "invite": InviteSheet()
+        case "paid-to-post": PaidToPostSheet()
+        case "cash-out": CashOutSheet()
+        case "host-purse": HostPurseSheet()
+        case "dispute": DisputeSheet(race: DemoSeed.races()[1], day: DemoSeed.races()[1].days[0])
+        case "finish-purse": FinishView(race: DemoSeed.races()[2])
         case "league", "crew": MainTabs().onAppear { model.tab = .crew }
         case "today-new": MainTabs().onAppear { model.races.removeAll { $0.status.isLive } }
         case "comeback": MainTabs().onAppear {

@@ -7,7 +7,7 @@ set -euo pipefail
 APP="$1"
 OUT="$2"
 BUNDLE="com.cipherdriftx.steppie"
-SCREENS="${SCREENS:-onboarding-welcome cast onboarding-invites today today-new comeback races contract comeback-contract pinning entered finish shoebox-open league shields progress wallet}"
+SCREENS="${SCREENS:-onboarding-welcome cast onboarding-how onboarding-code today today-new purses purse purse-live purse-join purse-entered finish-purse solo contract pinning entered finish crew invite paid-to-post wallet cash-out host-purse dispute comeback shoebox-open shields progress}"
 mkdir -p "$OUT"
 
 UDID="${SIM_UDID:-$(bash "$(dirname "$0")/sim-pick.sh")}"
