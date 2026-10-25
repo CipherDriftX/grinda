@@ -16,7 +16,8 @@ struct JoinPurseView: View {
     @State private var error: String?
     @State private var showGate = false
     @State private var shields = 0
-    @State private var potBefore = 0
+    /// The purse before your entry. Nil until you join; the demo route falls back to the live purse.
+    @State private var potBefore: Int?
 
     private var purse: Purse? { model.purse(purseID) }
 
@@ -44,9 +45,7 @@ struct JoinPurseView: View {
         .onAppear {
             if model.profile.shields > 0 && shields == 0 { shields = min(model.profile.shields, 1) }
             if previewPins > 0 { pins = previewPins }
-            potBefore = purse?.potCents ?? 0
-            // Next run loop, so the cover reads the potBefore set above.
-            if showEntered { DispatchQueue.main.async { entered = true } }
+            if showEntered { entered = true }
         }
         .alert("Couldn't join", isPresented: .constant(error != nil)) {
             Button("OK") { error = nil; rearm() }
@@ -54,7 +53,7 @@ struct JoinPurseView: View {
         .sheet(isPresented: $showGate, onDismiss: rearm) { AccountGate() }
         .fullScreenCover(isPresented: $entered) {
             if let p = purse {
-                PurseEnteredOverlay(purse: p, potBefore: potBefore, bib: model.entry(in: p)?.bibNumber ?? 3_318) {
+                PurseEnteredOverlay(purse: p, potBefore: potBefore ?? p.potCents, bib: model.entry(in: p)?.bibNumber ?? 3_318) {
                     entered = false
                     model.racesPath = NavigationPath()
                     model.tab = .today
