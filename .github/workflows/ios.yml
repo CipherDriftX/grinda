@@ -2,7 +2,7 @@ name: iOS build & screenshots
 
 on:
   push:
-    branches: [main]
+    branches: [main, steppie]
     paths: ["ios/**", "scripts/**", ".github/workflows/ios.yml"]
   pull_request:
     paths: ["ios/**", "scripts/**", ".github/workflows/ios.yml"]
@@ -53,7 +53,7 @@ jobs:
         working-directory: ios
         run: |
           set -o pipefail
-          xcodebuild -project Grinda.xcodeproj -scheme Grinda -configuration Debug \
+          xcodebuild -project Steppie.xcodeproj -scheme Steppie -configuration Debug \
             -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
             -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
@@ -67,7 +67,7 @@ jobs:
           path: ios/build.log
 
       - name: Capture Simulator screenshots
-        run: bash scripts/screenshots.sh ios/build/Build/Products/Debug-iphonesimulator/Grinda.app screenshots-out
+        run: bash scripts/screenshots.sh ios/build/Build/Products/Debug-iphonesimulator/Steppie.app screenshots-out
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

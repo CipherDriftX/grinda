@@ -22,29 +22,29 @@
 | Forfeit | Commitment contract | **Stripe pre-authorises the stake; captured only on failure** | Proves the pre-auth pattern passes App Review |
 | HealthyWage | Weight-loss bets | Insurance-style, sponsor-funded prizes | Long bets, high stakes |
 
-**Where Grinda sits:** commitment contract (the owner's choice: forfeits are kept) with a Forfeit-style hold, Steppa-level design, and faster settlement and stronger anti-cheat than both.
+**Where Steppie sits:** commitment contract (the owner's choice: forfeits are kept) with a Forfeit-style hold, Steppa-level design, and faster settlement and stronger anti-cheat than both.
 
 ## 3. Evidence that money on the line works
 
 - **StepBet field study** (n = 72,974, 2015–2020, 6-week games): daily steps rose **31.2%** (7,774 to 10,197). Winners rose 44%. **73%** of participants succeeded. **Larger deposits predicted higher odds of success.** Source: "Put your money where your feet are", PMC9982638.
 - **Loss aversion** (Kahneman & Tversky, 1979): losses weigh about 2x equivalent gains. Staking your own money beats winning someone else's.
 - **Commitment devices** (Giné, Karlan, Zinman, 2010, "Put Your Money Where Your Butt Is"): offering smokers a deposit account they forfeit on failure raised verified quit rates at 6 and 12 months by roughly 3–6 percentage points, a large relative effect for a voluntary, self-funded device.
-- **Walking and weight:** at roughly 0.04–0.05 kcal per step (body-weight dependent), 10k steps is about 300–500 kcal per day. A sustained deficit of about 7,700 kcal is about 1 kg of fat. Grinda shows this estimate transparently and never promises outcomes.
-- **Step targets and health:** mortality benefits plateau around 7,000–10,000 steps per day for adults (Paluch et al., Lancet Public Health 2022). Grinda recommends goals from the user's baseline (+20–30%, capped), not a blanket 10k.
+- **Walking and weight:** at roughly 0.04–0.05 kcal per step (body-weight dependent), 10k steps is about 300–500 kcal per day. A sustained deficit of about 7,700 kcal is about 1 kg of fat. Steppie shows this estimate transparently and never promises outcomes.
+- **Step targets and health:** mortality benefits plateau around 7,000–10,000 steps per day for adults (Paluch et al., Lancet Public Health 2022). Steppie recommends goals from the user's baseline (+20–30%, capped), not a blanket 10k.
 
 ## 4. Hooked model (Nir Eyal), mapped honestly
 
-| Phase | Grinda implementation |
+| Phase | Steppie implementation |
 |---|---|
 | **External trigger** | One smart evening nudge, only when you're behind pace ("1,840 steps to keep your €20: a 17-minute walk"). Morning "your day starts at 0" nudge. Streak-at-risk nudge. Max 2 per day, user-tunable. |
-| **Internal trigger** | "I want to feel in control of my weight." Guilt after a sedentary day turns into "open Grinda." Built by the onboarding "why" question, shown back to the user on hard days. |
+| **Internal trigger** | "I want to feel in control of my weight." Guilt after a sedentary day turns into "open Steppie." Built by the onboarding "why" question, shown back to the user on hard days. |
 | **Action** | Opening the app takes one glance: ring, steps to go, minutes-of-walking equivalent. Widget and Lock Screen widget remove even the open. |
 | **Variable reward: self** | Ring closes with a haptic and particle burst; streak flame grows; weight-trend line bends; milestone badges at unpredictable-but-earned moments ("You just walked the length of Manhattan"). |
 | **Variable reward: hunt** | Stake released back. The moment money returns is the biggest designed moment in the app. |
 | **Variable reward: tribe** | Live community pulse (real counts); share cards; friend challenges (Pro). |
 | **Investment** | Stake (money), streak, weight log, "why" statement, friends. Each makes the next loop more likely and the app more personal. |
 
-Manipulation Matrix check: the maker would use it (yes), and it materially improves the user's life (yes, more walking). That puts Grinda in the "facilitator" quadrant.
+Manipulation Matrix check: the maker would use it (yes), and it materially improves the user's life (yes, more walking). That puts Steppie in the "facilitator" quadrant.
 
 ## 5. What makes a logo "Fortune 500" (see brand/BRAND.md)
 

@@ -16,13 +16,16 @@ Adults (18+) who want to lose weight and have tried and quit before. They know w
 
 ## Product Purpose
 
-Grinda turns a daily walking goal into a commitment backed by the user's own money. The user stakes an amount on a challenge (e.g. 10,000 steps a day for 7 days). If they finish, they get every cent back. If they miss, Grinda keeps the stake. The purpose is weight loss through walking; the stake is the mechanism that makes people actually do it. Success means users hit their goal and lose weight, and tell others.
+Steppie turns a daily walking goal into money on the line. There are two ways to play. In a **purse race** everyone pays an entry, walks the daily goal every day, and the finishers split the whole purse, so walking pays. In a **solo race** the user stakes their own money (e.g. 10,000 steps a day for 7 days): finish and every cent comes back, miss and Steppie keeps the stake. The purpose is weight loss through walking; the money is the mechanism that makes people actually do it. Purse races follow Steppa's proven loop in Steppie's own world; the full map is `docs/PURSES.md`.
+
+The business: a fee on every purse entry ($0.50 + 4%, win or lose), plus solo stakers × stakes each × average stake × miss rate, plus Shields and Pro. Steppie grows by moving the first three (more people backing themselves, more often, with bigger stakes), never by engineering misses. The full playbook is `docs/STRATEGY.md`.
 
 ## Positioning
 
 - **Your money never leaves if you walk.** For challenges up to 6 days the card is only authorized (a hold), never charged; the hold is released the moment the challenge settles. Longer challenges are charged and refunded in full, automatically, within minutes of settlement.
-- **Commitment contract, not a lottery.** No prize pool, no chance element. You compete only against your past self.
-- **Honest about how it makes money.** Grinda earns from missed stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger.
+- **Skill, not luck.** Whether money comes back depends only on steps walked. No chance element touches money. Purse races split the purse evenly among finishers; solo races pit you against your past self.
+- **Show the math.** Every purse shows its total, who is still in, and what a finisher gets at real finish rates, before you join.
+- **Honest about how it makes money.** Steppie earns a fee on purse entries, missed solo stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger. Steppie never takes a cut of the purse itself.
 - **Built around the body, not the bet.** Goals are set from the user's weight goal and current baseline, not from what maximises revenue.
 
 ## Operating Context
@@ -35,16 +38,20 @@ Grinda turns a daily walking goal into a commitment backed by the user's own mon
 ## Capabilities and Constraints
 
 - Free forever: step tracking, daily goal ring, streaks, weight log, practice challenges (no money), weekly recap, share cards.
-- Staked challenges: the core paid mechanic. Stakes from 5 to 500 in the local currency. One free "grace day" per challenge of 7+ days.
-- Grinda Pro (StoreKit subscription): extra grace tokens, custom challenge builder, advanced insights, multiple concurrent challenges, friend challenges.
+- Staked challenges: the core paid mechanic. Stakes from 5 to 500 in the local currency, on tables (Rookie, Pacer, Racer, Champion, Legend). Champion opens after 1 finish, Legend after 3. One free grace day per challenge of 7+ days.
+- Steppie Shields (StoreKit consumable): cover one missed day each, up to 2 per race, unused ones return. One free with every account.
+- Comeback: one 5-day race within 72 h of a miss; finishing refunds 50% of the missed stake.
+- Game layer (no cash value): Grit and weekly leagues, the stake ladder, Shoe Boxes with cosmetic trainers for Steppie.
+- Steppie Pro (StoreKit subscription): custom challenge builder, advanced insights, multiple concurrent challenges, friend challenges, the Stride S icon.
 - Anti-cheat: ignore manually entered HealthKit samples (`HKMetadataKeyWasUserEntered`), prefer watch/phone motion sources, flag physiologically implausible cadence (> 250 steps/min sustained), device attestation (App Attest) on step submissions.
 - App Store: account deletion in-app, Sign in with Apple, HealthKit purpose strings, no HealthKit data used for advertising, 18+ age gate for staking.
 - Undecided: legal review per country for commitment contracts (consumer-law "penalty clause" rules in DE), charity option for forfeits, friend/team pools.
 
 ## Brand Commitments
 
-- Name: **Grinda** (the repo name, confirmed by the owner).
-- Voice: warm, direct, and on your side, like a coach who believes in you, not a casino host. Never shames. Celebrates effort.
+- Name: **Steppie**, for the app and for its lion (renamed from Grinda on 2026-10-01 by the owner). Steppie is a working name for now and may change before launch.
+- Cast: Steppie (lead), Dash (pacer, leagues), Shelly (Shields), Pip (notifications), Bo (the Vault). See `brand/mascot/MASCOT.md`.
+- Voice: warm, direct, and on your side, like a coach who believes in you, not a casino host. Never "bet", "wager", "odds" or "jackpot": purses have entries, finishers and splits. Never shames. Celebrates effort.
 
 ## Evidence on Hand
 
@@ -53,10 +60,10 @@ Grinda turns a daily walking goal into a commitment backed by the user's own mon
 
 ## Product Principles
 
-1. **The user wins, then we win.** Every design decision must increase the odds the user completes the challenge. Revenue from misses is a consequence, never a goal to optimise for.
+1. **Grow the stakes, not the misses.** Optimise for first-stake uptake, stakes per person and stake size. Never optimise for the miss rate: no silence after a deposit, no hidden terms, no chance element near money.
 2. **Trust is the product.** Show exactly where every cent is, at every moment. No surprises, no fine print, instant release.
 3. **Free is genuinely useful.** The free tier must help people walk more on its own; stakes are the upgrade for people who want to be held to it.
-4. **Honest hooks.** Use habit design (trigger, action, variable reward, investment) only in the user's interest. No fake urgency, no fake scarcity, no manipulation matrix "dealer" patterns.
+4. **Honest hooks, loud before the deposit.** Before a stake, persuade hard with true reasons (loss framing, endowed progress, fresh starts, the user's own shadow week, real deadlines), in opt-in notifications. After a stake, go quiet except one pace nudge. Variable rewards are cosmetic only. No fake urgency, no fake scarcity, no fake numbers.
 5. **Body first.** Goals, copy and nudges start from the user's health goal and real baseline.
 
 ## Accessibility & Inclusion

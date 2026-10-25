@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Captures App Store-sized screenshots of Grinda from the iOS Simulator.
-# Usage: scripts/screenshots.sh <path/to/Grinda.app> <out-dir>
+# Captures App Store-sized screenshots of Steppie from the iOS Simulator.
+# Usage: scripts/screenshots.sh <path/to/Steppie.app> <out-dir>
 # The app runs in demo mode (-demo YES) with synthetic data; -screen picks the scene.
 set -euo pipefail
 
 APP="$1"
 OUT="$2"
-BUNDLE="com.cipherdriftx.grinda"
-SCREENS="${SCREENS:-onboarding-welcome onboarding-baseline today races contract pinning entered progress wallet finish milestone}"
+BUNDLE="com.cipherdriftx.steppie"
+SCREENS="${SCREENS:-onboarding-welcome cast onboarding-how onboarding-code today today-new purses purse purse-live purse-join purse-entered finish-purse solo contract pinning entered finish crew invite paid-to-post wallet cash-out host-purse dispute comeback shoebox-open shields progress}"
 mkdir -p "$OUT"
 
 UDID="${SIM_UDID:-$(bash "$(dirname "$0")/sim-pick.sh")}"

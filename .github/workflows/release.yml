@@ -2,7 +2,7 @@ name: Release to TestFlight / App Store
 
 # Run manually from the Actions tab. Requires these repository secrets:
 #   APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64
-#   GRINDA_SUPABASE_URL, GRINDA_SUPABASE_ANON_KEY, GRINDA_STRIPE_PUBLISHABLE_KEY
+#   STEPPIE_SUPABASE_URL, STEPPIE_SUPABASE_ANON_KEY, STEPPIE_STRIPE_PUBLISHABLE_KEY
 on:
   workflow_dispatch:
     inputs:
@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     env:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      GRINDA_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      STEPPIE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
@@ -39,11 +39,11 @@ jobs:
         working-directory: ios
         run: |
           # "//" starts a comment in xcconfig files, so write https:/$()/host
-          ESC_URL=$(printf '%s' "${{ secrets.GRINDA_SUPABASE_URL }}" | sed 's#//#/$()/#')
+          ESC_URL=$(printf '%s' "${{ secrets.STEPPIE_SUPABASE_URL }}" | sed 's#//#/$()/#')
           cat > Config/Secrets.xcconfig <<EOF
-          GRINDA_SUPABASE_URL = ${ESC_URL}
-          GRINDA_SUPABASE_ANON_KEY = ${{ secrets.GRINDA_SUPABASE_ANON_KEY }}
-          GRINDA_STRIPE_PUBLISHABLE_KEY = ${{ secrets.GRINDA_STRIPE_PUBLISHABLE_KEY }}
+          STEPPIE_SUPABASE_URL = ${ESC_URL}
+          STEPPIE_SUPABASE_ANON_KEY = ${{ secrets.STEPPIE_SUPABASE_ANON_KEY }}
+          STEPPIE_STRIPE_PUBLISHABLE_KEY = ${{ secrets.STEPPIE_STRIPE_PUBLISHABLE_KEY }}
           EOF
 
       - name: Generate project

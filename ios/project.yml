@@ -1,4 +1,4 @@
-name: Grinda
+name: Steppie
 options:
   bundleIdPrefix: com.cipherdriftx
   deploymentTarget:
@@ -13,7 +13,7 @@ settings:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ${GRINDA_TEAM_ID}
+    DEVELOPMENT_TEAM: ${STEPPIE_TEAM_ID}
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_EMIT_LOC_STRINGS: YES
 packages:
@@ -21,38 +21,38 @@ packages:
     url: https://github.com/stripe/stripe-ios-spm
     from: "24.0.0"
 targets:
-  Grinda:
+  Steppie:
     type: application
     platform: iOS
     sources:
-      - path: Grinda
+      - path: Steppie
     resources: []
     dependencies:
       - package: Stripe
         product: StripePaymentSheet
-      - target: GrindaWidget
+      - target: SteppieWidget
         embed: true
     entitlements:
-      path: Grinda/Grinda.entitlements
+      path: Steppie/Steppie.entitlements
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
         com.apple.developer.healthkit.background-delivery: true
         com.apple.developer.applesignin: [Default]
-        com.apple.security.application-groups: [group.com.cipherdriftx.grinda]
-        com.apple.developer.in-app-payments: [merchant.com.cipherdriftx.grinda]
+        com.apple.security.application-groups: [group.com.cipherdriftx.steppie]
+        com.apple.developer.in-app-payments: [merchant.com.cipherdriftx.steppie]
         com.apple.developer.devicecheck.appattest-environment: production
     info:
-      path: Grinda/Info.plist
+      path: Steppie/Info.plist
       properties:
-        CFBundleDisplayName: Grinda
+        CFBundleDisplayName: Steppie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
-          - CFBundleURLName: com.cipherdriftx.grinda
-            CFBundleURLSchemes: [grinda]
+          - CFBundleURLName: com.cipherdriftx.steppie
+            CFBundleURLSchemes: [steppie]
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark
@@ -60,63 +60,63 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UIAppFonts:
-          - GrindaBib-Black.ttf
-          - GrindaBib-Bold.ttf
-          - GrindaWide-Black.ttf
+          - SteppieBib-Black.ttf
+          - SteppieBib-Bold.ttf
+          - SteppieWide-Black.ttf
         UIBackgroundModes: [fetch, processing]
-        BGTaskSchedulerPermittedIdentifiers: [com.cipherdriftx.grinda.refresh]
-        NSHealthShareUsageDescription: "Grinda reads your steps, walking distance and body weight from Apple Health to track your races and show your progress. Your health data is never used for advertising."
-        NSHealthUpdateUsageDescription: "Grinda can save the weight you log in the app to Apple Health so all your data stays in one place."
-        GrindaSupabaseURL: $(GRINDA_SUPABASE_URL)
-        GrindaSupabaseAnonKey: $(GRINDA_SUPABASE_ANON_KEY)
-        GrindaStripePublishableKey: $(GRINDA_STRIPE_PUBLISHABLE_KEY)
-        GrindaAppGroup: group.com.cipherdriftx.grinda
+        BGTaskSchedulerPermittedIdentifiers: [com.cipherdriftx.steppie.refresh]
+        NSHealthShareUsageDescription: "Steppie reads your steps, walking distance and body weight from Apple Health to track your races and show your progress. Your health data is never used for advertising."
+        NSHealthUpdateUsageDescription: "Steppie can save the weight you log in the app to Apple Health so all your data stays in one place."
+        SteppieSupabaseURL: $(STEPPIE_SUPABASE_URL)
+        SteppieSupabaseAnonKey: $(STEPPIE_SUPABASE_ANON_KEY)
+        SteppieStripePublishableKey: $(STEPPIE_STRIPE_PUBLISHABLE_KEY)
+        SteppieAppGroup: group.com.cipherdriftx.steppie
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.cipherdriftx.grinda
+        PRODUCT_BUNDLE_IDENTIFIER: com.cipherdriftx.steppie
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-Grin
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-Stride
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
-  GrindaWidget:
+  SteppieWidget:
     type: app-extension
     platform: iOS
     sources:
-      - path: GrindaWidget
-      - path: Grinda/DesignSystem/Palette.swift
-      - path: Grinda/DesignSystem/Mascot.swift
-      - path: Grinda/DesignSystem/MascotArt.swift
-      - path: Grinda/DesignSystem/Motion.swift
-      - path: Grinda/Models/Models.swift
-      - path: Grinda/Models/WidgetSnapshot.swift
-      - path: Grinda/Resources/Fonts
+      - path: SteppieWidget
+      - path: Steppie/DesignSystem/Palette.swift
+      - path: Steppie/DesignSystem/Mascot.swift
+      - path: Steppie/DesignSystem/MascotArt.swift
+      - path: Steppie/DesignSystem/Motion.swift
+      - path: Steppie/Models/Models.swift
+      - path: Steppie/Models/WidgetSnapshot.swift
+      - path: Steppie/Resources/Fonts
         buildPhase: resources
     entitlements:
-      path: GrindaWidget/GrindaWidget.entitlements
+      path: SteppieWidget/SteppieWidget.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.cipherdriftx.grinda]
+        com.apple.security.application-groups: [group.com.cipherdriftx.steppie]
     info:
-      path: GrindaWidget/Info.plist
+      path: SteppieWidget/Info.plist
       properties:
-        CFBundleDisplayName: Grinda
+        CFBundleDisplayName: Steppie
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         UIAppFonts:
-          - GrindaBib-Black.ttf
-          - GrindaBib-Bold.ttf
-        GrindaAppGroup: group.com.cipherdriftx.grinda
+          - SteppieBib-Black.ttf
+          - SteppieBib-Bold.ttf
+        SteppieAppGroup: group.com.cipherdriftx.steppie
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.cipherdriftx.grinda.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.cipherdriftx.steppie.widget
         TARGETED_DEVICE_FAMILY: "1"
 schemes:
-  Grinda:
+  Steppie:
     build:
       targets:
-        Grinda: all
+        Steppie: all
     run:
       config: Debug
     archive:

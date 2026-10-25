@@ -1,2 +1,2 @@
-app_identifier("com.cipherdriftx.grinda")
+app_identifier("com.cipherdriftx.steppie")
 team_id(ENV["APPLE_TEAM_ID"])

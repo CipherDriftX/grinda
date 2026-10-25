@@ -1,92 +1,219 @@
-<p align="center"><img src="brand/mascot/renders/x-header.png" alt="Grinda: Money on the line. Lion at your side."></p>
+<p align="center"><img src="brand/mascot/renders/x-header.png" alt="Steppie: Back yourself. Keep your money."></p>
 
-<h3 align="center">Walk it off. Keep your money.</h3>
+<h3 align="center">Get paid to walk.</h3>
 
-Grinda is an iPhone app that turns a daily walking goal into a commitment backed by your own money. You pin a race bib, stake an amount, and walk. When you finish, every cent comes back. Short races are only a **hold** on your card, so nothing is ever charged if you finish. If you miss, the stake is kept.
+Steppie is an iPhone app that pays you to walk. Join a purse, hit your step goal every day, and everyone who finishes splits the whole purse. Miss a day and your entry stays in for the finishers. Prefer to race yourself? Solo races still work the old way: put down a stake, finish, and every cent comes back.
 
-It's built to help people lose weight by walking. The stake is the mechanism. **Grin**, the Grinda lion, keeps you company.
+The name Steppie is a working name. How purses work, and how they map to Steppa's game, is in [`docs/PURSES.md`](docs/PURSES.md).
+
+**Steppie** is a lion in running shoes who runs your laps with you. The crew around him each own one part of the game.
+
+<p align="center"><img src="brand/mascot/renders/cast-character-sheet.png" alt="Steppie and the crew"></p>
+
+| | Who | Job in the app |
+|---|---|---|
+| 🦁 | **Steppie** | Runs your laps on the Today track, coaches you, grows his mane with your goal days, wears the trainers you earn. |
+| 🐆 | **Dash** | The pacer: a ghost on your track showing where a steady walker would be by now. Hosts the weekly league in Crew. |
+| 🐢 | **Shelly** | Keeper of Shields. Each Shield covers one missed day; unused ones come back. |
+| 🐦 | **Pip** | Brings the news: purse invites, the 10 pm last call, your shadow week, and Paid to Post. |
+| 🐻 | **Bo** | Guards the Vault: winnings, entry credit, cash-outs, holds and refunds. |
 
 ## The app
 
+**Getting started**
+
 <p align="center">
-  <img src="screenshots/light/onboarding-welcome.png" width="200">
-  <img src="screenshots/light/today.png" width="200">
-  <img src="screenshots/light/pinning.png" width="200">
-  <img src="screenshots/light/entered.png" width="200">
+  <img src="screenshots/light/onboarding-welcome.png" width="180" alt="onboarding-welcome">
+  <img src="screenshots/light/cast.png" width="180" alt="cast">
+  <img src="screenshots/light/onboarding-how.png" width="180" alt="onboarding-how">
+  <img src="screenshots/light/onboarding-code.png" width="180" alt="onboarding-code">
 </p>
+
+**Purses**
+
 <p align="center">
-  <img src="screenshots/light/finish.png" width="200">
-  <img src="screenshots/light/milestone.png" width="200">
-  <img src="screenshots/light/progress.png" width="200">
-  <img src="screenshots/light/wallet.png" width="200">
+  <img src="screenshots/light/purses.png" width="240" alt="purses">
+  <img src="screenshots/light/purse.png" width="240" alt="purse">
+  <img src="screenshots/light/purse-live.png" width="240" alt="purse-live">
 </p>
+
 <p align="center">
-  <img src="screenshots/light/races.png" width="200">
-  <img src="screenshots/light/contract.png" width="200">
-  <img src="screenshots/light/onboarding-baseline.png" width="200">
-  <img src="screenshots/dark/today.png" width="200">
+  <img src="screenshots/light/purse-join.png" width="240" alt="purse-join">
+  <img src="screenshots/light/purse-entered.png" width="240" alt="purse-entered">
+  <img src="screenshots/light/finish-purse.png" width="240" alt="finish-purse">
+</p>
+
+**Every day**
+
+<p align="center">
+  <img src="screenshots/light/today.png" width="240" alt="today">
+  <img src="screenshots/light/today-new.png" width="240" alt="today-new">
+  <img src="screenshots/light/shields.png" width="240" alt="shields">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/progress.png" width="240" alt="progress">
+  <img src="screenshots/light/dispute.png" width="240" alt="dispute">
+  <img src="screenshots/light/comeback.png" width="240" alt="comeback">
+</p>
+
+**Solo races**
+
+<p align="center">
+  <img src="screenshots/light/solo.png" width="240" alt="solo">
+  <img src="screenshots/light/contract.png" width="240" alt="contract">
+  <img src="screenshots/light/pinning.png" width="240" alt="pinning">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/entered.png" width="240" alt="entered">
+  <img src="screenshots/light/finish.png" width="240" alt="finish">
+  <img src="screenshots/light/shoebox-open.png" width="240" alt="shoebox-open">
+</p>
+
+**Crew and the Vault**
+
+<p align="center">
+  <img src="screenshots/light/crew.png" width="240" alt="crew">
+  <img src="screenshots/light/invite.png" width="240" alt="invite">
+  <img src="screenshots/light/paid-to-post.png" width="240" alt="paid-to-post">
+</p>
+
+<p align="center">
+  <img src="screenshots/light/wallet.png" width="240" alt="wallet">
+  <img src="screenshots/light/cash-out.png" width="240" alt="cash-out">
+  <img src="screenshots/light/host-purse.png" width="240" alt="host-purse">
 </p>
 
 <p align="center"><img src="screenshots/pinning.gif" width="260" alt="Hold to pin your bib"><br><em>The signature interaction: hold to pin your bib.</em></p>
 
-These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode on every push. The data is synthetic. Dark mode versions are in [`screenshots/dark`](screenshots/dark).
+These are real iOS Simulator captures (iPhone 6.9") taken by CI in demo mode. All names, steps and money in them are demo data.
+
+<details>
+<summary><b>Dark mode</b></summary>
+
+**Getting started**
+
+<p align="center">
+  <img src="screenshots/dark/onboarding-welcome.png" width="150" alt="onboarding-welcome">
+  <img src="screenshots/dark/cast.png" width="150" alt="cast">
+  <img src="screenshots/dark/onboarding-how.png" width="150" alt="onboarding-how">
+  <img src="screenshots/dark/onboarding-code.png" width="150" alt="onboarding-code">
+</p>
+
+**Purses**
+
+<p align="center">
+  <img src="screenshots/dark/purses.png" width="200" alt="purses">
+  <img src="screenshots/dark/purse.png" width="200" alt="purse">
+  <img src="screenshots/dark/purse-live.png" width="200" alt="purse-live">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/purse-join.png" width="200" alt="purse-join">
+  <img src="screenshots/dark/purse-entered.png" width="200" alt="purse-entered">
+  <img src="screenshots/dark/finish-purse.png" width="200" alt="finish-purse">
+</p>
+
+**Every day**
+
+<p align="center">
+  <img src="screenshots/dark/today.png" width="200" alt="today">
+  <img src="screenshots/dark/today-new.png" width="200" alt="today-new">
+  <img src="screenshots/dark/shields.png" width="200" alt="shields">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/progress.png" width="200" alt="progress">
+  <img src="screenshots/dark/dispute.png" width="200" alt="dispute">
+  <img src="screenshots/dark/comeback.png" width="200" alt="comeback">
+</p>
+
+**Solo races**
+
+<p align="center">
+  <img src="screenshots/dark/solo.png" width="200" alt="solo">
+  <img src="screenshots/dark/contract.png" width="200" alt="contract">
+  <img src="screenshots/dark/pinning.png" width="200" alt="pinning">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/entered.png" width="200" alt="entered">
+  <img src="screenshots/dark/finish.png" width="200" alt="finish">
+  <img src="screenshots/dark/shoebox-open.png" width="200" alt="shoebox-open">
+</p>
+
+**Crew and the Vault**
+
+<p align="center">
+  <img src="screenshots/dark/crew.png" width="200" alt="crew">
+  <img src="screenshots/dark/invite.png" width="200" alt="invite">
+  <img src="screenshots/dark/paid-to-post.png" width="200" alt="paid-to-post">
+</p>
+
+<p align="center">
+  <img src="screenshots/dark/wallet.png" width="200" alt="wallet">
+  <img src="screenshots/dark/cash-out.png" width="200" alt="cash-out">
+  <img src="screenshots/dark/host-purse.png" width="200" alt="host-purse">
+</p>
+
+</details>
 
 ### App Store screenshots
 
-<p align="center">
-  <img src="ios/fastlane/screenshots/en-US/01_today.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/02_pinning.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/03_finish.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/04_wallet.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/05_progress.png" width="150">
-  <img src="ios/fastlane/screenshots/en-US/06_races.png" width="150">
-</p>
-
-## Meet Grin
-
-<p align="center"><img src="brand/mascot/renders/grin-character-sheet.png" alt="Grin character sheet"></p>
-
-Grin is a vector character built in code (`brand/mascot/tools/grin.py`). The same geometry renders the marketing art and animates natively in SwiftUI.
-- **Moods:** happy, calm, cheer, roar, worried, sleep, wink, proud.
-- **Poses:** idle, cheer, wave, hold, flex.
-- **The mane grows with you:** Cub → Young lion → Lion → King of the track, based on your goal days in the last 14. It never resets overnight.
-- **Where he appears:** Today (coach lines, tap him for a reaction), onboarding, the hold-to-pin flow, the finish, medals, empty states, the paywall, share cards, the widget, and notifications.
-- **Motion:** idle motion is near-invisible because people see it many times a day. Celebrations get squash-and-stretch hops, confetti, and haptics. Reduce Motion is respected everywhere.
-
-The engagement system (evolving mascot, medals, the Walktober campaign, Grin-voiced nudges) is documented with its research in [`brand/mascot/MASCOT.md`](brand/mascot/MASCOT.md).
+Framed by [`marketing/appstore_frames.py`](marketing/appstore_frames.py) from the captures above.
 
 <p align="center">
-  <img src="brand/mascot/renders/post-mane-goal.png" width="180">
-  <img src="brand/mascot/renders/post-keep-your-money.png" width="180">
-  <img src="brand/mascot/renders/post-hold-it.png" width="180">
-  <img src="brand/mascot/renders/post-grow-your-mane.png" width="180">
-  <img src="brand/mascot/renders/post-walktober.png" width="180">
+  <img src="ios/fastlane/screenshots/en-US/01_purses.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/02_purse-live.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/03_purse-join.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/04_today.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/05_finish-purse.png" width="150">
+</p>
+<p align="center">
+  <img src="ios/fastlane/screenshots/en-US/06_invite.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/07_paid-to-post.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/08_shields.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/09_cash-out.png" width="150">
+  <img src="ios/fastlane/screenshots/en-US/10_shoebox-open.png" width="150">
 </p>
 
-## What's in the box
+## How it makes money
 
-| | |
+Steppie earns a small fee on every purse entry, win or lose, plus Pro, hosting and Shields. 100% of every purse goes to the people who finish, so Steppie never earns more when people miss. Solo stakes that are missed still go to Steppie. The playbook is in [`docs/STRATEGY.md`](docs/STRATEGY.md) and the purse rules in [`docs/PURSES.md`](docs/PURSES.md).
+
+| Lever | What it is |
 |---|---|
-| **Today** | Your steps as laps on a stadium track with a ghost pacer, plus Grin with a line about your actual day. |
-| **Races** | 5-Day Sprint, 10K Week, Weekend Warrior, 30-Day Reset, and a free Practice Lap. Each race is a numbered bib. |
-| **Commit** | The whole deal in plain words, then **hold to pin your bib**: four pins, four haptic taps, then Apple Pay via Stripe. |
-| **Progress** | Grin's mane, distance as a journey, the trophy case (13 medals), the weight trend, and a punch card. |
-| **Wallet** | A passbook of every hold, charge, release, and refund with its Stripe reference, plus Grinda's public books. |
-| **Finish** | The tape breaks, Grin cheers, confetti, and your stake counts back up. Share card for X and Discord. |
-| **Also** | Widgets with Grin, the evening pace nudge (max one), Grinda Pro (StoreKit 2, with a Grin app icon), account deletion, and an EN/DE listing. |
+| **Purse fee** | $0.50 + 4% of the entry, shown on top before you pin. Pro pays none. |
+| **Steppie Pro** | No fee, $10 of entry credit a month, 5 races at once, a free host purse each month, the gold mane badge and the Stride S icon. Trial reminder 2 days before it renews. |
+| **Hosting** | A public purse costs $25 to host (free once a month with Pro). The host earns 5% on top of each entry. Crew purses are free. |
+| **$5 + $5 invites** | The friend gets $5 of entry credit; you get $5 cash after their first paid entry. |
+| **Paid to Post** | $1 per 1,000 views on posts about Steppie, up to $600 a post. Cheaper than ads. |
+| **Shields** | Each covers one missed day, in purses too. Up to 2 per race; unused ones come back. |
+| **Starter Kit** | Onboarding ends with the first pin already in your bib and a free Shield. |
+| **Weekly leagues** | Grit from race days. Top 7 move up every Sunday. |
+| **Shoe Boxes** | Every finish: a random pair of trainers for Steppie. Cosmetic only, never sold. |
+| **Solo stakes** | Rookie €5 to Legend €100. Finish and every cent comes back. Miss and the stake is kept. |
+
+Whether you finish depends only on your steps, and the split is plain maths: the purse divided by the finishers. Winnings go to the Vault; cash out from $25, up to $500 a day. Paid play is 18+ and blocked where local law requires it.
+
+## Brand
+
+<p align="center"><img src="brand/logo/lockup-on-cobalt.png" width="520" alt="Steppie lockup"></p>
+
+The **Stride S**: an S cut in two by a forward stride, every cut on the same 58° angle. One colour, works at 16 px, generated from geometry (`brand/tools/stride.py`). Full guide: [`brand/BRAND.md`](brand/BRAND.md).
 
 ## Repo map
 
 - `ios/`: SwiftUI app (iOS 17+), widget, and fastlane. The project is generated by XcodeGen (`cd ios && xcodegen generate`).
-- `supabase/`: Postgres schema with RLS, plus Edge Functions: `create-stake`, `stripe-webhook`, `submit-steps`, `settle` (cron), `public-stats`, `delete-account`.
-- `brand/`: name, G-Track symbol, wordmark, icons, fonts, and the **Grin mascot** (`brand/mascot/`: source, renders, bible).
-- `marketing/`: the weekly stats post for X and Discord (live numbers only) and the App Store frame generator.
-- `site/`: landing page, privacy, support, and race rules, at https://cipherdriftx.github.io/grinda/
-- `docs/`: research, strategy, the prompt audit, and the **shipping guide**.
-- `PRODUCT.md` and `DESIGN.md`: the product record and the design system.
+- `supabase/`: Postgres schema with RLS, plus Edge Functions: `create-stake`, `join-purse`, `host-purse`, `cash-out`, `redeem-invite`, `submit-dispute`, `submit-post`, `stripe-webhook`, `submit-steps`, `settle` (cron), `grant-shields`, `public-stats`, `delete-account`. Leagues and purse splits are SQL (`league_board()`, `roll_leagues()`, `split_purse()`, `open_house_purses()`).
+- `brand/`: the Stride S, wordmark, icons, Steppie fonts, and the cast (`brand/mascot/`: geometry source, renders, bible).
+- `marketing/`: weekly stats post for X and Discord (live numbers only) and the App Store frame generator.
+- `site/`: landing page, privacy, support and race rules.
+- `docs/`: strategy and money playbook, research, the prompt audit, and the shipping guide.
 
 ## Run it
 
-- **On a Mac:** `brew install xcodegen && cd ios && xcodegen generate && open Grinda.xcodeproj`. Add the launch arguments `-demo YES` to see it with sample data.
+- **On a Mac:** `brew install xcodegen && cd ios && xcodegen generate && open Steppie.xcodeproj`. Add the launch arguments `-demo YES` to see it with sample data, and `-screen <name>` to jump to a scene (see `DemoRouter` in `SteppieApp.swift`).
 - **CI:** every push to `ios/` builds on a macOS runner and captures screenshots.
-- **Ship:** follow [`docs/SHIPPING.md`](docs/SHIPPING.md) (Apple, Stripe, Supabase, and GitHub secrets), then run the **Release** workflow.
+- **Ship:** follow [`docs/SHIPPING.md`](docs/SHIPPING.md) (Apple, Stripe, Supabase, App Store Server API and GitHub secrets), then run the **Release** workflow.

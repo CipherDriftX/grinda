@@ -1,5 +1,5 @@
-# Supabase project config for Grinda (used by `supabase start` / `supabase deploy`).
-project_id = "grinda"
+# Supabase project config for Steppie (used by `supabase start` / `supabase deploy`).
+project_id = "steppie"
 
 [api]
 enabled = true
@@ -8,12 +8,12 @@ schemas = ["public"]
 
 [auth]
 enabled = true
-site_url = "grinda://auth"
+site_url = "steppie://auth"
 
 [auth.external.apple]
 enabled = true
 # Bundle ID of the iOS app; native Sign in with Apple uses id_token exchange.
-client_id = "com.cipherdriftx.grinda"
+client_id = "com.cipherdriftx.steppie"
 secret = ""
 
 # Functions called by Stripe, pg_cron or anonymous visitors don't carry a user JWT.

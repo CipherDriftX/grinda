@@ -1,6 +1,6 @@
-# Grinda design system
+# Steppie design system
 
-The world: **a stadium track seen from above**. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Grinda/DesignSystem/`.
+The world: **a stadium track seen from above**, with a cast of characters running it. A walking day is a race against yourself. Every race is a numbered bib printed on Tyvek and pinned at four corners. Money gets banknote-grade line work. The source of truth for values is `ios/Steppie/DesignSystem/`.
 
 ## Colour
 
@@ -25,9 +25,9 @@ Rules: volt never decorates. Red never decorates. On cobalt, secondary text is `
 ## Type
 
 - **UI:** SF Pro text styles (Dynamic Type). Headings are bold/heavy and sized as `.title3`–`.largeTitle`.
-- **Numerals:** `BrandFont.numerals(size, relativeTo:)` uses Grinda Bib Black (Archivo, width 62, weight 900), like race-bib numbers. It's used for step counts, goals, money amounts, and day counts.
-- **Labels:** `BrandFont.label(size)` uses Grinda Bib Bold (width 75, weight 750), uppercase, for bib headers, grid labels, and money bands.
-- **Display:** Grinda Wide Black is for the wordmark only.
+- **Numerals:** `BrandFont.numerals(size, relativeTo:)` uses Steppie Bib Black (Archivo, width 62, weight 900), like race-bib numbers. It's used for step counts, goals, money amounts, and day counts.
+- **Labels:** `BrandFont.label(size)` uses Steppie Bib Bold (width 75, weight 750), uppercase, for bib headers, grid labels, and money bands.
+- **Display:** Steppie Wide Black is for the wordmark only.
 - No eyebrow or kicker labels above headings.
 
 ## Components
@@ -39,7 +39,7 @@ Rules: volt never decorates. Red never decorates. On cobalt, secondary text is `
 | `PunchRow` | `Bib.swift` | Hit = hole showing the field colour. Missed = red ×. Grace = dashed. Today = progress ring. |
 | `Guilloche` | `Bib.swift` | Fine sine-wave line work behind money. |
 | `HoldToPinButton` | `HoldToPin.swift` | Signature interaction: 1.6 s hold, a pin every 25% with a rigid haptic, success haptic at the end; release springs back in 0.25 s. |
-| `GTrackMark` | `GTrackMark.swift` | Live logo. Draws itself on Welcome. |
+| `StrideMark` | `StrideMark.swift` | Live logo. Draws itself on Welcome. |
 | Leader lines | `WalletView.swift` | Passbook "label …… value" rows. |
 | Buttons | `Motion.swift` | `.primary` (cobalt slab, 56 pt), `.onField` (white on cobalt), `.volt` (finish only), `.pressable` (scale 0.97). |
 
@@ -59,6 +59,48 @@ Depth: paper on ground, `shadow(black 14%, radius 18, y 10)`. No zero-offset glo
 
 A coach on your side. Specific numbers ("4,120 to go · about 38 min"), plain money language ("held · never charged if you finish"), and never shaming. Money copy appears only where money moves.
 
-## Mascot: Grin
+## Cast and motion
 
-Source of truth: `brand/mascot/tools/grin.py` (400 × 460 canvas), exported to `ios/Grinda/DesignSystem/MascotArt.swift`. `GrinView(mood:pose:mane:hop:animated:)` renders layered Canvas parts: arms rotate about the shoulders, the head tilts about the neck, eyes blink about the eye line, and the tail sways about its base. Mascot colours (fur `#FFBE3D`, mane `#F0781E`) are used only on Grin and medals. Brand cobalt and volt appear only on his band and bib. Idle motion stays near-invisible. Hops use keyframed squash and stretch. Confetti (`ConfettiBurst`) is for rare moments only. See `brand/mascot/MASCOT.md`.
+Source of truth: `brand/mascot/tools/steppie.py` and `cast.py` (400 × 460 canvas), exported to `ios/Steppie/DesignSystem/MascotArt.swift` as rigs. `CharacterView(who:mood:pose:mane:shoes:hop:running:animated:)` renders and animates any of the five: Steppie (lead), Dash (pacer), Shelly (Shields), Pip (messages), Bo (Vault). Steppie's shoe colourways come from `ShoeStyle` and recolour his trainer parts by id.
+
+Effects live in `Effects.swift`: `ConfettiBurst` (fluttering paper), `CoinRain` (money coming home), `SparkleField`, `RaysBackground`, `DustPuffs`, and the modifiers `.shimmer()`, `.pulseHalo()`, `.shake(_)`. Loud effects are rationed to rare moments (pinning, goal, finish, Shoe Box); everyday screens get sparkles and shimmer. Every effect is skipped under Reduce Motion.
+
+## Game components
+
+| Component | File | Notes |
+|---|---|---|
+| `StakeChip` | `ContractView.swift` | Poker chip per stake, coloured by table. Selected chip sits on a stack with a volt glow; locked tables show a padlock; the ladder's next rung wears "LEVEL UP". |
+| `TierBadge` | `ContractView.swift` | The table you're sitting at. |
+| `StatChip` | `TodayView.swift` | Streak, Shields and Grit on the field. |
+| `ShadowRaceCard` | `TodayView.swift` | Pip shows your last 7 days as if staked. Only when nothing is staked. |
+| `ComebackCard` | `TodayView.swift` | Real 72 h deadline, live countdown. |
+| `ShoeBoxSheet` | `Rewards/ShoeBoxView.swift` | Anticipation shakes, burst, reveal with rarity colour. |
+| `LeagueBadge` | `League/LeagueView.swift` | Crest in the league colour with the Stride S. |
+| `StrideMark` | `StrideMark.swift` | The live logo: the two halves stride in and snap together on the cut. |
+
+## Purse components
+
+Purse races borrow banknote language: rosettes, guilloche, serial-style codes and a big money figure. The purse total is always the biggest number on a purse surface. Green money (`#1F7A52`) is for a split you could win; volt stays for money that came back.
+
+| Component | File | Notes |
+|---|---|---|
+| `PurseNote` | `PurseKit.swift` | A purse as a banknote: art colour, rosette, guilloche band, purse total, entry, days, goal, still-in. `compact:` for rows and teasers. |
+| `CountingMoney` / `CountUpMoney` | `PurseKit.swift` | Money that rolls up digit by digit. Used when an entry lands in a purse and when a split is paid. |
+| `LiveTag` | `PurseKit.swift` | Pulsing dot + label. Red only while a purse is live and someone can still drop out. |
+| `Countdown` | `PurseKit.swift` | Ticks once a second to the day close in your time zone. Turns red under 4 hours if steps are left. |
+| `StillInBar` | `PurseKit.swift` | One bar, three parts: on pace, behind, out. The live count in one glance. |
+| `PayoutTicker` | `PurseKit.swift` | Recent payouts from `payout_feed` sliding past on the Purses board. Hidden when the feed is empty, so a new app never shows invented wins. |
+| `EntrantsStack` | `PurseKit.swift` | Overlapping cast faces plus "N in". |
+| `CoinDrop` | `PurseKit.swift` | A coin falls into the purse when you join. |
+| `PayoutMath` | `PurseDetailView.swift` | Your split if 93%, 85% or 75% finish, shown before you join. |
+| `LiveBoard` | `PurseDetailView.swift` | Ranked runners with today's steps, you pinned and highlighted. |
+| `JoinPurseView` + `PurseEnteredOverlay` | `JoinPurseView.swift` | Bib preview, money leader lines (entry, fee, host 5%, total, from Vault, on card), Shields stepper, hold to pin. Then the purse total counts up with your entry, coin drop, confetti and the cast. |
+| `PurseLiveStrip` | `TodayPurse.swift` | Under your bib on Today: LIVE, day N, the clock, purse total, your split now, still-in bar, your rank, steps left. |
+| `AlsoRunning` | `TodayPurse.swift` | Other races (Pro runs 5 at once) as slim rows with a ring. |
+| `PurseTeaser` | `TodayPurse.swift` | No purse yet: the biggest open purse as a banknote. |
+| `InviteCard`, `PaidToPostCard`, `PayoutsList`, `BenchNote` | `Crew/CrewView.swift` | The Crew tab: league, $5 + $5 invites, Paid to Post, recent payouts, accounts removed for fake steps (never names). |
+| Sheets | `CrewSheets.swift`, `CashOutSheet.swift`, `HostPurseSheet.swift`, `DisputeSheet.swift` | Invite code, Paid to Post calculator, cash out from the Vault, host a purse with a live banknote preview, send proof for a day that didn't sync. |
+
+## App icon
+
+Steppie's lion on a purse seal: a cobalt field with soft rays, a scalloped volt seal ring with fine green guilloche, and an inner cobalt disc behind the lion. Dark uses an ink field; tinted is a grayscale version for iOS tinted mode. Files live in `brand/icon/` and `AppIcon.appiconset`.
