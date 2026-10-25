@@ -3,6 +3,7 @@ import SwiftUI
 struct RaceDetailView: View {
     let raceID: UUID
     @Environment(AppModel.self) private var model
+    @State private var disputing: DayRecord?
 
     private var race: Race? { model.races.first { $0.id == raceID } }
 
@@ -11,6 +12,21 @@ struct RaceDetailView: View {
             if let race {
                 VStack(alignment: .leading, spacing: 28) {
                     BibCard(race: race).padding(.top, 8)
+                    if let ticket = race.purse, let p = model.purse(ticket.purseID) {
+                        NavigationLink(value: p) {
+                            HStack {
+                                Label("See \(p.name) live", systemImage: "chart.bar.xaxis")
+                                    .font(.system(.headline, weight: .semibold))
+                                Spacer()
+                                Text(p.pot.formatted).font(BrandFont.numerals(18, relativeTo: .body))
+                                Image(systemName: "chevron.right").font(.footnote.weight(.bold))
+                            }
+                            .foregroundStyle(Palette.ink)
+                            .padding(14)
+                            .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.pressable)
+                    }
                     daysList(race)
                     moneyStatus(race)
                     ShareLink(item: ShareCardRenderer.image(for: race, stepsToday: model.todaySteps),
@@ -26,6 +42,9 @@ struct RaceDetailView: View {
         .background(Palette.ground)
         .navigationTitle(race?.name ?? "Race")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $disputing) { day in
+            if let race { DisputeSheet(race: race, day: day) }
+        }
     }
 
     private func daysList(_ race: Race) -> some View {
@@ -44,6 +63,21 @@ struct RaceDetailView: View {
                 }
                 .padding(.vertical, 12)
                 .accessibilityElement(children: .combine)
+                if day.state == .missed && race.settledAt == nil {
+                    Button { disputing = day } label: {
+                        Label("Walked it but it didn't sync? Send proof", systemImage: "camera.viewfinder")
+                            .font(.system(.footnote, weight: .semibold))
+                    }
+                    .frame(minHeight: 44, alignment: .leading)
+                    .padding(.top, -6)
+                }
+                if day.state == .review {
+                    Text("A person is checking your screenshot. You stay in until they answer, usually within a few hours.")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .padding(.bottom, 10)
+                        .padding(.top, -6)
+                }
                 if i < race.days.count - 1 { Divider().overlay(Palette.hairline) }
             }
         }
@@ -72,6 +106,15 @@ struct RaceDetailView: View {
 
     private func moneyText(_ race: Race) -> String {
         guard let stake = race.stake else { return "This is a practice lap. No money involved." }
+        if let ticket = race.purse {
+            if let payout = ticket.payoutCents {
+                let m = Money(cents: payout, currency: stake.currency)
+                return payout > 0
+                    ? "You finished. Your split of \(m.formatted) went to your Vault. \(ticket.finishers.map { "\($0.formatted()) people finished." } ?? "")"
+                    : "You missed a day, so your \(stake.formatted) entry stayed in the purse for the finishers."
+            }
+            return "Your \(stake.formatted) entry is in the purse. Finish every day and you split the whole purse with every other finisher. It settles \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour())), a day after the last day closes."
+        }
         let card = race.cardLast4.map { " on the card ending \($0)" } ?? ""
         switch race.stakeState {
         case .held: return "\(stake.formatted) is held\(card). It has not been charged. Finish and the hold disappears."

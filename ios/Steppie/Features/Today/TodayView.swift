@@ -22,9 +22,13 @@ struct TodayView: View {
                             }
                             .buttonStyle(.pressable)
                             .arrive(1)
+                            if race.isPurse { PurseLiveStrip(race: race).arrive(2) }
                             if !race.isPractice { ShieldStrip(race: race).arrive(2) }
+                            AlsoRunning(races: model.liveRaces.filter { $0.id != race.id }).arrive(3)
+                            if !model.liveRaces.contains(where: \.isPurse) { PurseTeaser().arrive(3) }
                         } else {
                             ShadowRaceCard().arrive(1)
+                            PurseTeaser().arrive(2)
                         }
                         if model.profile.unopenedBoxes > 0 {
                             ShoeBoxTeaser().arrive(2)
@@ -42,6 +46,7 @@ struct TodayView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Race.self) { RaceDetailView(raceID: $0.id) }
             .navigationDestination(for: RaceTemplate.self) { ContractView(template: $0) }
+            .navigationDestination(for: Purse.self) { PurseDetailView(purseID: $0.id) }
             .refreshable { await model.refresh() }
         }
     }
