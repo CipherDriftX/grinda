@@ -113,14 +113,15 @@ struct PursesBoard: View {
     }
 
     private func findCode() {
-        let c = code.trimmingCharacters(in: .whitespaces).uppercased()
-        if let p = model.purses.first(where: { $0.code?.uppercased() == c }) {
-            Haptics.success()
-            code = ""
-            model.racesPath.append(p)
-        } else {
-            Haptics.warning()
-            withAnimation(.linear(duration: 0.4)) { codeMiss += 1 }
+        Task {
+            if let p = await model.findPurse(code: code) {
+                Haptics.success()
+                code = ""
+                model.racesPath.append(p)
+            } else {
+                Haptics.warning()
+                withAnimation(.linear(duration: 0.4)) { codeMiss += 1 }
+            }
         }
     }
 

@@ -148,7 +148,25 @@ final class APIClient {
     // MARK: Purses
 
     func purses() async throws -> [Purse] {
-        try await get("rest/v1/purse_board?select=*&order=starts_at.asc")
+        let rows: [Purse] = try await get("rest/v1/purse_board?select=*&order=starts_at.asc")
+        return rows.map(Self.localDays)
+    }
+
+    /// A crew purse someone sent you. Nil if no open purse has that code.
+    func purseByCode(_ code: String) async throws -> Purse? {
+        struct Body: Encodable { let code: String }
+        let p: Purse? = try await send("rest/v1/rpc/purse_by_code", body: Body(code: code))
+        return p.map(Self.localDays)
+    }
+
+    /// Purses run on calendar days, each walker in their own time zone. The
+    /// server sends the start day as UTC midnight; make it local midnight.
+    private static func localDays(_ p: Purse) -> Purse {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        var p = p
+        p.startsAt = Calendar.current.date(from: utc.dateComponents([.year, .month, .day], from: p.startsAt)) ?? p.startsAt
+        return p
     }
 
     struct JoinPurseRequest: Encodable {

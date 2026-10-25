@@ -666,6 +666,16 @@ final class AppModel {
         benchTotal = (try? await api.benchTotal()) ?? benchTotal
     }
 
+    /// Finds a purse by code: the ones on the board first, then the server
+    /// (crew purses aren't on anyone's board until they join).
+    func findPurse(code raw: String) async -> Purse? {
+        let code = raw.trimmingCharacters(in: .whitespaces).uppercased()
+        if let p = purses.first(where: { $0.code?.uppercased() == code }) { return p }
+        guard !isDemo, api.isConfigured, let p = try? await api.purseByCode(code) else { return nil }
+        if !purses.contains(where: { $0.id == p.id }) { purses.append(p) }
+        return p
+    }
+
     func loadBoard(for p: Purse) async {
         if isDemo {
             purseBoards[p.id] = DemoSeed.board(for: p, me: profile.displayName ?? "You", mine: entry(in: p), todaySteps: todaySteps)
