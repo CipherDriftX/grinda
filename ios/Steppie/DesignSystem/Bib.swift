@@ -118,6 +118,8 @@ struct BibCard: View {
     var settles: Date? = nil
     var pinned = 4 // how many of the four pins are in (0...4)
     var compact = false
+    /// Set for purse entries: the band shows the purse instead of a refund.
+    var purse: PurseTicket? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -177,7 +179,7 @@ struct BibCard: View {
         HStack(spacing: 0) {
             cell("Race", dayLabel)
             Rectangle().fill(Palette.hairline).frame(width: 1)
-            cell("Stake", stake?.formatted ?? "Free")
+            cell(purse == nil ? "Stake" : "Entry", stake?.formatted ?? "Free")
             Rectangle().fill(Palette.hairline).frame(width: 1)
             cell("Settles", settles.map { $0.formatted(.dateTime.weekday(.abbreviated).hour().minute()) } ?? "3h after")
         }
@@ -221,6 +223,11 @@ struct BibCard: View {
     }
 
     private var bandText: String {
+        if let purse {
+            let pot = Money(cents: purse.potCents, currency: stake?.currency ?? Money.localCurrency)
+            if let paid = purse.payoutCents { return "SPLIT \(Money(cents: paid, currency: pot.currency).formatted) · \(purse.finishers ?? 0) FINISHERS" }
+            return "\(pot.formatted) PURSE · SPLIT WITH EVERY FINISHER"
+        }
         guard let stake else { return "PRACTICE · NO MONEY" }
         return usesHold ? "\(stake.formatted) HELD · NEVER CHARGED IF YOU FINISH" : "\(stake.formatted) · BACK IN FULL WHEN YOU FINISH"
     }
@@ -247,7 +254,7 @@ struct BibCard: View {
 extension BibCard {
     init(race: Race, compact: Bool = false) {
         self.init(name: race.name, bibNumber: race.bibNumber, dailyGoal: race.dailyGoal, dayLabel: race.dayLabel,
-                  stake: race.stake, usesHold: race.usesHold, days: race.days, settles: race.settlesAt, compact: compact)
+                  stake: race.stake, usesHold: race.usesHold, days: race.days, settles: race.settlesAt, compact: compact, purse: race.purse)
     }
 
     init(template t: RaceTemplate, stake: Int?, bibNumber: Int = 0, pinned: Int = 4, startingToday: Bool = true) {
