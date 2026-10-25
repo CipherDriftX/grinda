@@ -52,6 +52,28 @@ Each point is a top complaint in Steppa's App Store reviews or on Reddit.
 - **Big visible purses:** the purse total is the biggest number on every purse card.
 - **Rating prompt** right after a win, never after a miss.
 
+## How it's built
+
+**App (SwiftUI).** Races has two boards, Purses and Solo. A purse opens to its banknote, payout math, live board and rules; joining goes through `JoinPurseView`. Today shows the live strip under your bib. The Crew tab holds the league, invites, Paid to Post, payouts and the bench. Wallet shows the Vault (ready to cash out) and entry credit.
+
+**Database (`supabase/migrations/20261025000100_purses.sql`).**
+- `purses`: kind (house, host, crew), entry, goal, days, start date, optional step window, code, cap, `listed`, `settled_at`.
+- `races` gains `purse_id`, fee, host fee, amount paid from balance, payout, finishers. One entry per member per purse.
+- `profiles` gains `vault_cents`, `credit_cents`, invite code, invited by, `is_pro`, free host purse month. Every balance change goes through `adjust_balance()`.
+- Views: `purse_board` (cards and live counts), `purse_runners()` (the live board), `payout_feed` and `bench_total` (public), `purse_by_code()` (crew codes).
+- `split_purse()` pays 100% of the purse to finishers, cent for cent, into their Vaults, and pays the host cut. If nobody finishes, every entry goes back to its owner's Vault.
+- `open_house_purses()` runs every Sunday from pg_cron and opens the week's 7 house purses in USD and EUR.
+- Tables for cash-outs, disputes (with a private storage bucket for screenshots), Paid to Post submissions and referrals.
+
+**Edge functions.** `join-purse` (entry credit first, then the Vault, then the card), `host-purse` (crew purses are free; public ones cost $25 unless it's a Pro member's free one this month), `cash-out`, `redeem-invite`, `submit-dispute`, `submit-post`. `stripe-webhook` records entry and fee lines and pays referrals; `settle` marks disputed days under review and calls `split_purse` when a purse is due. Shared fee maths and tests live in `_shared/common.ts`.
+
+## Still to do before money moves
+
+- **Server-side Pro.** The server reads `is_pro` from the database and never trusts the app, but nothing sets that flag yet. It needs App Store Server Notifications. Until then, Pro members are charged the fee on real entries.
+- **Cash-out payouts.** A cash-out is recorded as "requested". A payouts run (Stripe Connect or PayPal Payouts) or a person still has to send the money.
+- **Host fee payment.** The host fee reuses the stake payment reply shape with a placeholder race id. It works, but deserves its own type.
+- **Legal.** 18+ checks and location blocks are in the plan, not yet in the code.
+
 ## Money in and out
 
 - Entries are paid by card through Stripe, from your Vault balance first. Apple in-app purchase is only used for Pro and Shields.

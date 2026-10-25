@@ -77,3 +77,30 @@ Effects live in `Effects.swift`: `ConfettiBurst` (fluttering paper), `CoinRain` 
 | `ShoeBoxSheet` | `Rewards/ShoeBoxView.swift` | Anticipation shakes, burst, reveal with rarity colour. |
 | `LeagueBadge` | `League/LeagueView.swift` | Crest in the league colour with the Stride S. |
 | `StrideMark` | `StrideMark.swift` | The live logo: the two halves stride in and snap together on the cut. |
+
+## Purse components
+
+Purse races borrow banknote language: rosettes, guilloche, serial-style codes and a big money figure. The purse total is always the biggest number on a purse surface. Green money (`#1F7A52`) is for a split you could win; volt stays for money that came back.
+
+| Component | File | Notes |
+|---|---|---|
+| `PurseNote` | `PurseKit.swift` | A purse as a banknote: art colour, rosette, guilloche band, purse total, entry, days, goal, still-in. `compact:` for rows and teasers. |
+| `CountingMoney` / `CountUpMoney` | `PurseKit.swift` | Money that rolls up digit by digit. Used when an entry lands in a purse and when a split is paid. |
+| `LiveTag` | `PurseKit.swift` | Pulsing dot + label. Red only while a purse is live and someone can still drop out. |
+| `Countdown` | `PurseKit.swift` | Ticks once a second to the day close in your time zone. Turns red under 4 hours if steps are left. |
+| `StillInBar` | `PurseKit.swift` | One bar, three parts: on pace, behind, out. The live count in one glance. |
+| `PayoutTicker` | `PurseKit.swift` | Recent payouts from `payout_feed` sliding past on the Purses board. Hidden when the feed is empty, so a new app never shows invented wins. |
+| `EntrantsStack` | `PurseKit.swift` | Overlapping cast faces plus "N in". |
+| `CoinDrop` | `PurseKit.swift` | A coin falls into the purse when you join. |
+| `PayoutMath` | `PurseDetailView.swift` | Your split if 93%, 85% or 75% finish, shown before you join. |
+| `LiveBoard` | `PurseDetailView.swift` | Ranked runners with today's steps, you pinned and highlighted. |
+| `JoinPurseView` + `PurseEnteredOverlay` | `JoinPurseView.swift` | Bib preview, money leader lines (entry, fee, host 5%, total, from Vault, on card), Shields stepper, hold to pin. Then the purse total counts up with your entry, coin drop, confetti and the cast. |
+| `PurseLiveStrip` | `TodayPurse.swift` | Under your bib on Today: LIVE, day N, the clock, purse total, your split now, still-in bar, your rank, steps left. |
+| `AlsoRunning` | `TodayPurse.swift` | Other races (Pro runs 5 at once) as slim rows with a ring. |
+| `PurseTeaser` | `TodayPurse.swift` | No purse yet: the biggest open purse as a banknote. |
+| `InviteCard`, `PaidToPostCard`, `PayoutsList`, `BenchNote` | `Crew/CrewView.swift` | The Crew tab: league, $5 + $5 invites, Paid to Post, recent payouts, accounts removed for fake steps (never names). |
+| Sheets | `CrewSheets.swift`, `CashOutSheet.swift`, `HostPurseSheet.swift`, `DisputeSheet.swift` | Invite code, Paid to Post calculator, cash out from the Vault, host a purse with a live banknote preview, send proof for a day that didn't sync. |
+
+## App icon
+
+Steppie's lion on a purse seal: a cobalt field with soft rays, a scalloped volt seal ring with fine green guilloche, and an inner cobalt disc behind the lion. Dark uses an ink field; tinted is a grayscale version for iOS tinted mode. Files live in `brand/icon/` and `AppIcon.appiconset`.

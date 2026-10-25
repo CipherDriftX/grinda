@@ -73,9 +73,9 @@ A coach who's on your side, with a crew that's fun to be around. Short, warm, sp
 
 ## App icon
 
-- `icon/appicon.png`: Steppie's face on a floodlit cobalt field with the volt stride slash. Mascot faces win the home screen (Duolingo's owl is the precedent).
+- `icon/appicon.png`: Steppie on a purse seal. A cobalt field with soft rays, a scalloped volt seal with green guilloche, and the lion on an inner cobalt disc. Mascot faces win the home screen (Duolingo's owl is the precedent), and the seal says money without a dollar sign.
 - `icon/appicon-dark.png`: the same on ink.
-- `icon/appicon-tinted.png`: the Stride S, for iOS tinted mode.
+- `icon/appicon-tinted.png`: a grayscale version for iOS tinted mode.
 - `icon/appicon-stride.png`: the Stride S on cobalt, the Pro alternate icon.
 
 Generator: `tools/brand.py` (fonts, wordmark, lockups, icons).
