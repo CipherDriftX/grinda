@@ -170,7 +170,7 @@ private struct WelcomeStep: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 14)
                 .opacity(shown ? 1 : 0)
-            Text("Join a purse with thousands of walkers. Hit your steps every day and split the whole purse with everyone who finishes.")
+            Text("Join a purse with other walkers. Hit your steps every day and split the whole purse with everyone who finishes.")
                 .font(.title3)
                 .foregroundStyle(Palette.onFieldSecondary)
                 .padding(.top, 12)

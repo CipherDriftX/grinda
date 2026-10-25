@@ -45,7 +45,8 @@ struct JoinPurseView: View {
             if model.profile.shields > 0 && shields == 0 { shields = min(model.profile.shields, 1) }
             if previewPins > 0 { pins = previewPins }
             potBefore = purse?.potCents ?? 0
-            if showEntered { entered = true }
+            // Next run loop, so the cover reads the potBefore set above.
+            if showEntered { DispatchQueue.main.async { entered = true } }
         }
         .alert("Couldn't join", isPresented: .constant(error != nil)) {
             Button("OK") { error = nil; rearm() }
