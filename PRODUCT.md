@@ -16,15 +16,16 @@ Adults (18+) who want to lose weight and have tried and quit before. They know w
 
 ## Product Purpose
 
-Steppie turns a daily walking goal into a commitment backed by the user's own money. The user stakes an amount on a challenge (e.g. 10,000 steps a day for 7 days). If they finish, they get every cent back. If they miss, Steppie keeps the stake. The purpose is weight loss through walking; the stake is the mechanism that makes people actually do it.
+Steppie turns a daily walking goal into money on the line. There are two ways to play. In a **purse race** everyone pays an entry, walks the daily goal every day, and the finishers split the whole purse, so walking pays. In a **solo race** the user stakes their own money (e.g. 10,000 steps a day for 7 days): finish and every cent comes back, miss and Steppie keeps the stake. The purpose is weight loss through walking; the money is the mechanism that makes people actually do it. Purse races follow Steppa's proven loop in Steppie's own world; the full map is `docs/PURSES.md`.
 
-The business: revenue = stakers × stakes each × average stake × miss rate, plus Shields and Pro. Steppie grows by moving the first three (more people backing themselves, more often, with bigger stakes), never by engineering misses. The full playbook is `docs/STRATEGY.md`.
+The business: a fee on every purse entry ($0.50 + 4%, win or lose), plus solo stakers × stakes each × average stake × miss rate, plus Shields and Pro. Steppie grows by moving the first three (more people backing themselves, more often, with bigger stakes), never by engineering misses. The full playbook is `docs/STRATEGY.md`.
 
 ## Positioning
 
 - **Your money never leaves if you walk.** For challenges up to 6 days the card is only authorized (a hold), never charged; the hold is released the moment the challenge settles. Longer challenges are charged and refunded in full, automatically, within minutes of settlement.
-- **Commitment contract, not a lottery.** No prize pool, no chance element. You compete only against your past self.
-- **Honest about how it makes money.** Steppie earns from missed stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger.
+- **Skill, not luck.** Whether money comes back depends only on steps walked. No chance element touches money. Purse races split the purse evenly among finishers; solo races pit you against your past self.
+- **Show the math.** Every purse shows its total, who is still in, and what a finisher gets at real finish rates, before you join.
+- **Honest about how it makes money.** Steppie earns a fee on purse entries, missed solo stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger. Steppie never takes a cut of the purse itself.
 - **Built around the body, not the bet.** Goals are set from the user's weight goal and current baseline, not from what maximises revenue.
 
 ## Operating Context
@@ -48,9 +49,9 @@ The business: revenue = stakers × stakes each × average stake × miss rate, pl
 
 ## Brand Commitments
 
-- Name: **Steppie**, for the app and for its lion (renamed from Grinda on 2026-10-01 by the owner).
+- Name: **Steppie**, for the app and for its lion (renamed from Grinda on 2026-10-01 by the owner). Steppie is a working name for now and may change before launch.
 - Cast: Steppie (lead), Dash (pacer, leagues), Shelly (Shields), Pip (notifications), Bo (the Vault). See `brand/mascot/MASCOT.md`.
-- Voice: warm, direct, and on your side, like a coach who believes in you, not a casino host. Never "bet", "wager" or "odds". Never shames. Celebrates effort.
+- Voice: warm, direct, and on your side, like a coach who believes in you, not a casino host. Never "bet", "wager", "odds" or "jackpot": purses have entries, finishers and splits. Never shames. Celebrates effort.
 
 ## Evidence on Hand
 
