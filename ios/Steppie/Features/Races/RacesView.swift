@@ -3,51 +3,28 @@ import SwiftUI
 struct RacesView: View {
     @Environment(AppModel.self) private var model
 
-    private var featured: RaceTemplate { RaceTemplate.board[0] }
-    private var others: [RaceTemplate] { Array(RaceTemplate.board.dropFirst()) }
-
     var body: some View {
-        NavigationStack {
+        @Bindable var model = model
+        NavigationStack(path: $model.racesPath) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    if let lost = model.comebackOffer { ComebackCard(lost: lost) }
-                    if Walktober.isOn() { WalktoberBanner() }
-                    if !model.liveRaces.isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Running now").font(.system(.title3, weight: .bold))
-                            ForEach(model.liveRaces) { race in
-                                NavigationLink(value: race) { BibCard(race: race, compact: true) }
-                                    .buttonStyle(.pressable)
-                            }
-                        }
+                VStack(alignment: .leading, spacing: 20) {
+                    Picker("Race type", selection: $model.racesMode.animation(Motion.standard)) {
+                        ForEach(RacesMode.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Start here").font(.system(.title3, weight: .bold))
-                        NavigationLink(value: featured) { FeaturedRace(template: featured) }
-                            .buttonStyle(.pressable)
-                    }
-
-                    TablesStrip()
-
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("The board").font(.system(.title3, weight: .bold)).padding(.bottom, 8)
-                        ForEach(Array(others.enumerated()), id: \.element.id) { i, t in
-                            NavigationLink(value: t) { BoardRow(template: t) }
-                                .buttonStyle(.pressable)
-                            if i < others.count - 1 { Divider().overlay(Palette.hairline) }
-                        }
-                        Button { model.showingPaywall = true } label: {
-                            BoardRow(template: nil)
-                        }
-                        .buttonStyle(.pressable)
-                    }
-
-                    if !model.finishedRaces.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Finished").font(.system(.title3, weight: .bold))
-                            ForEach(model.finishedRaces) { race in FinishedRow(race: race) }
-                        }
+                    .pickerStyle(.segmented)
+                    Text(model.racesMode == .purses
+                         ? "Everyone puts in the same entry. Finish every day and split the whole purse."
+                         : "Put your own money on your walk. Finish and every cent comes back.")
+                        .font(.subheadline)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .contentTransition(.opacity)
+                    if model.racesMode == .purses {
+                        PursesBoard()
+                            .transition(.asymmetric(insertion: .move(edge: .leading).combined(with: .opacity), removal: .opacity))
+                    } else {
+                        SoloBoard()
+                            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
                     }
                 }
                 .padding(16)
@@ -57,6 +34,62 @@ struct RacesView: View {
             .navigationTitle("Races")
             .navigationDestination(for: RaceTemplate.self) { ContractView(template: $0) }
             .navigationDestination(for: Race.self) { RaceDetailView(raceID: $0.id) }
+            .navigationDestination(for: Purse.self) { PurseDetailView(purseID: $0.id) }
+            .refreshable { await model.loadPurses() }
+        }
+    }
+}
+
+/// Solo races: your own stake, back in full when you finish.
+private struct SoloBoard: View {
+    @Environment(AppModel.self) private var model
+
+    private var featured: RaceTemplate { RaceTemplate.board[0] }
+    private var others: [RaceTemplate] { Array(RaceTemplate.board.dropFirst()) }
+    private var liveSolo: [Race] { model.liveRaces.filter { !$0.isPurse } }
+    private var finished: [Race] { model.finishedRaces }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            if let lost = model.comebackOffer { ComebackCard(lost: lost) }
+            if Walktober.isOn() { WalktoberBanner() }
+            if !liveSolo.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Running now").font(.system(.title3, weight: .bold))
+                    ForEach(liveSolo) { race in
+                        NavigationLink(value: race) { BibCard(race: race, compact: true) }
+                            .buttonStyle(.pressable)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Start here").font(.system(.title3, weight: .bold))
+                NavigationLink(value: featured) { FeaturedRace(template: featured) }
+                    .buttonStyle(.pressable)
+            }
+
+            TablesStrip()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("The board").font(.system(.title3, weight: .bold)).padding(.bottom, 8)
+                ForEach(Array(others.enumerated()), id: \.element.id) { i, t in
+                    NavigationLink(value: t) { BoardRow(template: t) }
+                        .buttonStyle(.pressable)
+                    if i < others.count - 1 { Divider().overlay(Palette.hairline) }
+                }
+                Button { model.showingPaywall = true } label: {
+                    BoardRow(template: nil)
+                }
+                .buttonStyle(.pressable)
+            }
+
+            if !finished.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Finished").font(.system(.title3, weight: .bold))
+                    ForEach(finished) { race in FinishedRow(race: race) }
+                }
+            }
         }
     }
 }
@@ -189,6 +222,10 @@ private struct FinishedRow: View {
 
     private var outcome: String {
         guard let stake = race.stake else { return race.status == .won ? "Finished" : "Missed" }
+        if let p = race.purse {
+            if race.status == .won, let paid = p.payoutCents { return "+\(Money(cents: paid - stake.cents, currency: stake.currency).formatted) split" }
+            return race.status == .won ? "Split pending" : "\(stake.formatted) to the purse"
+        }
         return race.status == .won ? "\(stake.formatted) back" : "\(stake.formatted) kept"
     }
 }

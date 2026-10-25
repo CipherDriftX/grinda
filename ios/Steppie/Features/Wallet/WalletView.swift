@@ -86,7 +86,7 @@ private struct Passbook: View {
 }
 
 /// "Label ........ value", the way a receipt or passbook lines up money.
-private struct LeaderLine: View {
+struct LeaderLine: View {
     let label: String
     let value: String
     let emphasis: Bool

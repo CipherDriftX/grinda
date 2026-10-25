@@ -7,6 +7,12 @@ enum AppTab: String, Hashable {
     case today, races, crew, progress, wallet
 }
 
+enum RacesMode: String, Hashable, CaseIterable {
+    case purses, solo
+
+    var title: String { self == .purses ? "Purses" : "Solo" }
+}
+
 /// Single source of truth for the app. Owns services, local persistence and
 /// the derived race state the screens render.
 @MainActor
@@ -25,6 +31,10 @@ final class AppModel {
     var publicStats: PublicStats?
     var healthConnected = false
     var tab: AppTab = .today
+    /// Navigation in the Races tab, so codes and links can push a purse.
+    var racesPath = NavigationPath()
+    /// Races tab segment: purses (finishers split) or solo (your own money back).
+    var racesMode: RacesMode = .purses
     var celebrating: Race?
     var showingProfile = false
     var showingPaywall = false
