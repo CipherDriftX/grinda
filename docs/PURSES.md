@@ -21,7 +21,7 @@ The purse is the hook, and solo races are for people who want discipline without
 
 ## Purse races
 
-- **Split:** 100% of the purse goes to finishers, split evenly. Leftover cents go to the finisher with the most steps, never to us. We earn from the fee alone.
+- **Split:** 100% of the purse goes to finishers, split evenly. Leftover cents go one each to the finishers who joined first, never to us. We earn from the fee alone.
 - **Fee:** $0.50 + 4% of the entry, shown on top of the entry before you pin. Pro members pay no fee. Host purses add 5% for the host.
 - **Payout math before you join:** the join screen shows your payout if 93%, 85% or 75% of the field finishes. Those are the finish rates real step purses see. The projection never changes after you join; only the real result does.
 - **Live count:** every purse shows how many are still in, on pace and behind, and the purse total, updated live. When late syncs move someone back in, the purse page says so in a line, so a final winner count never looks invented.
