@@ -19,7 +19,7 @@ struct PaywallView: View {
                     .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(.white)
                 VStack(alignment: .leading, spacing: 14) {
-                    ProLine(symbol: "percent", text: "No service fee on any purse entry")
+                    ProLine(symbol: "percent", text: "No service fee when your balance pays, lower fee by card")
                     ProLine(symbol: "gift", text: "$10 of entry credit every month")
                     ProLine(symbol: "square.stack.3d.up", text: "Run up to 5 races and purses at once")
                     ProLine(symbol: "megaphone", text: "Host one public purse a month free, and earn 5% of entries")

@@ -72,21 +72,22 @@ struct JoinPurseView: View {
 
     private func money(_ p: Purse) -> some View {
         let q = model.joinQuote(p)
-        let serviceFee = PurseFee.serviceCents(entryCents: q.entry, isPro: model.isPro)
-        let hostFee = PurseFee.hostCents(entryCents: q.entry, kind: p.kind)
         return VStack(alignment: .leading, spacing: 12) {
             Text("The money").font(.system(.title3, weight: .bold))
             VStack(spacing: 10) {
                 LeaderLine(label: "Entry, into the purse", value: p.entry.formatted, emphasis: false)
-                LeaderLine(label: model.isPro ? "Service fee (Pro: none)" : "Service fee", value: Money(cents: serviceFee, currency: p.currency).formatted, emphasis: false)
-                if hostFee > 0 {
-                    LeaderLine(label: "Host's 5%", value: Money(cents: hostFee, currency: p.currency).formatted, emphasis: false)
+                LeaderLine(label: q.funding == .balance ? "Service fee (paid from balance)" : "Service fee (card)",
+                           value: Money(cents: q.fee, currency: p.currency).formatted, emphasis: false)
+                if q.host > 0 {
+                    LeaderLine(label: "Host's 5%", value: Money(cents: q.host, currency: p.currency).formatted, emphasis: false)
                 }
                 Divider().overlay(Palette.hairline)
-                LeaderLine(label: "Total", value: Money(cents: q.entry + q.fee, currency: p.currency).formatted, emphasis: false)
-                if q.fromVault > 0 {
-                    LeaderLine(label: "From your Vault", value: Money(cents: q.fromVault, currency: p.currency).formatted, emphasis: true)
-                    LeaderLine(label: "On your card", value: Money(cents: q.fromCard, currency: p.currency).formatted, emphasis: false)
+                LeaderLine(label: "Total", value: Money(cents: q.total, currency: p.currency).formatted, emphasis: false)
+                if q.fromBalance > 0 {
+                    LeaderLine(label: "From your balance", value: Money(cents: q.fromBalance, currency: p.currency).formatted, emphasis: true)
+                }
+                if q.fromCard > 0 {
+                    LeaderLine(label: "By card", value: Money(cents: q.fromCard, currency: p.currency).formatted, emphasis: false)
                 }
             }
             .padding(16)
@@ -97,7 +98,7 @@ struct JoinPurseView: View {
                 .fixedSize(horizontal: false, vertical: true)
             if !model.isPro {
                 Button { model.showingPaywall = true } label: {
-                    Label("Pro members pay no fee", systemImage: "sparkles")
+                    Label("Pro: no fee from your balance", systemImage: "sparkles")
                         .font(.system(.subheadline, weight: .semibold))
                 }
                 .frame(minHeight: 44)

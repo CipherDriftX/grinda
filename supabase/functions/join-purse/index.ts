@@ -2,7 +2,7 @@
 // Vault, then the card. The race is live at once when balances cover it;
 // otherwise it waits for the card payment (stripe-webhook activates it).
 import {
-  admin, consecutiveDates, handler, hostFee, HttpError, json, localToday, payReferral, requireUser, serviceFee, settleInstant,
+  admin, consecutiveDates, handler, HttpError, json, localToday, payReferral, quoteEntry, requireUser, settleInstant,
   stripe, STRIPE_API_VERSION, stripeCustomer,
 } from "../_shared/common.ts";
 
@@ -51,16 +51,9 @@ Deno.serve(handler(async (req) => {
   const shields = Math.max(0, Math.min(Math.floor(body.shields_equipped ?? 0), 2));
   if (shields > (profile?.shields ?? 0)) throw new HttpError(400, "Not enough Shields in your locker.");
 
-  const entry = purse.entry_cents as number;
-  const fee = serviceFee(entry, isPro);
-  const host = hostFee(entry, purse.kind);
-  const total = entry + fee + host;
-
-  // Balances: credit first (entry-only money), then the Vault.
-  const fromCredit = Math.min(profile?.credit_cents ?? 0, total);
-  const fromVault = Math.min(profile?.vault_cents ?? 0, total - fromCredit);
-  const fromCard = total - fromCredit - fromVault;
-  if (fromCard > 0 && fromCard < 50) throw new HttpError(400, "Add a little to your Vault first; cards need at least 50 cents.");
+  // Credit first, then the Vault, then a card; the fee is lower when no card is needed.
+  const q = quoteEntry(purse.entry_cents, purse.kind, isPro, profile?.credit_cents ?? 0, profile?.vault_cents ?? 0);
+  const { entry, fee, host, fromCredit, fromVault, fromCard } = q;
 
   const dates = consecutiveDates(purse.starts_on, purse.days);
   const settlesAt = settleInstant(dates[dates.length - 1], body.timezone, 24); // late syncs always land

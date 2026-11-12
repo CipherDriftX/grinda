@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { consecutiveDates, hostFee, scheduleDates, serviceFee, settleInstant, TEMPLATES, usesHold, windowSteps } from "./common.ts";
+import { consecutiveDates, hostFee, scheduleDates, quoteEntry, serviceFee, settleInstant, TEMPLATES, windowSteps } from "./common.ts";
 
 Deno.test("settles 3h after local midnight (Berlin, CEST)", () => {
   // 2026-09-30 ends at 2026-10-01 00:00 CEST = 2026-09-30T22:00Z; +3h = 01:00Z
@@ -16,16 +16,44 @@ Deno.test("weekend schedule picks only Saturdays and Sundays", () => {
   assertEquals(d.length, 8);
 });
 
-Deno.test("only short consecutive races are holds", () => {
-  assertEquals(usesHold(TEMPLATES["sprint-5"]), true);
-  assertEquals(usesHold(TEMPLATES["10k-week"]), false);
-  assertEquals(usesHold(TEMPLATES["weekend"]), false);
+Deno.test("purse fee: 0.99 + 5% by card, 0.50 + 4% from the balance", () => {
+  assertEquals(serviceFee(2000, false, "card"), 199);
+  assertEquals(serviceFee(2000, false, "balance"), 130);
+  assertEquals(serviceFee(500, false, "card"), 124);
+  assertEquals(serviceFee(500, false, "balance"), 70);
 });
 
-Deno.test("purse fee: 50 cents + 4% on top, none for Pro", () => {
-  assertEquals(serviceFee(2000, false), 130);
-  assertEquals(serviceFee(2000, true), 0);
-  assertEquals(serviceFee(500, false), 70);
+Deno.test("Pro: free from the balance, card cost only by card", () => {
+  assertEquals(serviceFee(2000, true, "balance"), 0);
+  assertEquals(serviceFee(2000, true, "card"), 109);
+});
+
+Deno.test("quote: balances that cover it all get the balance fee and no card", () => {
+  const q = quoteEntry(2000, "house", false, 500, 1700);
+  assertEquals([q.funding, q.fee, q.total, q.fromCredit, q.fromVault, q.fromCard], ["balance", 130, 2130, 500, 1630, 0]);
+});
+
+Deno.test("quote: a card part pays the card fee, balances first", () => {
+  const q = quoteEntry(2000, "host", false, 500, 1000);
+  // 2000 entry + 199 fee + 100 host = 2299; 500 credit + 1000 Vault, 799 by card.
+  assertEquals([q.funding, q.fee, q.host, q.total, q.fromCredit, q.fromVault, q.fromCard], ["card", 199, 100, 2299, 500, 1000, 799]);
+});
+
+Deno.test("quote: a card never charges under 50 cents and every cent is paid once", () => {
+  for (const entry of [500, 1000, 2000, 5000, 10000]) {
+    for (const kind of ["house", "host", "crew"]) {
+      for (const isPro of [false, true]) {
+        for (let have = 0; have <= entry + 800; have += 7) {
+          for (const q of [quoteEntry(entry, kind, isPro, have, 0), quoteEntry(entry, kind, isPro, 0, have), quoteEntry(entry, kind, isPro, have >> 1, have - (have >> 1))]) {
+            assertEquals(q.fromCredit + q.fromVault + q.fromCard, q.total);
+            assertEquals(q.total, q.entry + q.fee + q.host);
+            assertEquals(q.fromCard === 0 || q.fromCard >= 50, true);
+            assertEquals(q.fromCredit >= 0 && q.fromVault >= 0 && q.fromCredit + q.fromVault <= have, true);
+          }
+        }
+      }
+    }
+  }
 });
 
 Deno.test("host gets 5% on top, only on public purses", () => {

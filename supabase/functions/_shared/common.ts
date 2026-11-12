@@ -1,14 +1,5 @@
 // Shared helpers for Steppie Edge Functions.
 import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
-import Stripe from "npm:stripe@17";
-
-export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2025-02-24.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
-export const STRIPE_API_VERSION = "2025-02-24.acacia";
-
 export function admin(): SupabaseClient {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -72,11 +63,6 @@ export const TEMPLATES: Record<string, Template> = {
 /** Comebacks: five days at the missed race's goal (the goal is filled in per race). */
 export const COMEBACK: Template = { id: "comeback", name: "Comeback", dailyGoal: 0, days: 5, graceDays: 0, schedule: "consecutive", staked: true };
 
-/** Holds (manual capture) only when the race settles well inside Stripe's 7-day authorisation window. */
-export function usesHold(t: Template): boolean {
-  return t.staked && t.schedule === "consecutive" && t.days <= 5;
-}
-
 /** Calendar dates (YYYY-MM-DD) the race runs on, starting at `start`. */
 export function scheduleDates(t: Template, start: string): string[] {
   const out: string[] = [];
@@ -106,17 +92,67 @@ export function settleInstant(date: string, tz: string, graceHours = 3): Date {
 // Purses ---------------------------------------------------------------------------
 // Same numbers as PurseFee in the app. The fee is on top of the entry; the entry
 // itself goes whole into the purse.
-export const PURSE_FLAT_FEE = 50;
-export const PURSE_FEE_RATE = 0.04;
+//
+// A card entry costs Steppie a card payment (Whop: 2.7% + $0.30 for US cards),
+// money already in the Vault costs nothing to move. So the fee follows the
+// money: cheaper when the balance pays, higher when a card does.
+export type Funding = "balance" | "card";
+export const FEES: Record<Funding, { flat: number; rate: number }> = {
+  balance: { flat: 50, rate: 0.04 },
+  card: { flat: 99, rate: 0.05 },
+};
+/** Pro: no fee from the balance; card entries pay only what the card costs. */
+export const PRO_FEES: Record<Funding, { flat: number; rate: number }> = {
+  balance: { flat: 0, rate: 0 },
+  card: { flat: 49, rate: 0.03 },
+};
 export const HOST_RATE = 0.05;
 export const HOST_CREATE_CENTS = 2500;
-export const CASHOUT_MIN = 2500;
+export const CARD_MIN = 50;          // the smallest card charge
+export const CASHOUT_MIN = 500;      // a 5 stake that comes back can always be cashed out
 export const CASHOUT_DAILY = 50000;
 export const INVITE_CREDIT = 500;
 export const INVITE_BONUS = 500;
 
-export function serviceFee(entryCents: number, isPro: boolean): number {
-  return isPro ? 0 : PURSE_FLAT_FEE + Math.round(entryCents * PURSE_FEE_RATE);
+export function serviceFee(entryCents: number, isPro: boolean, funding: Funding): number {
+  const f = (isPro ? PRO_FEES : FEES)[funding];
+  return f.flat + Math.round(entryCents * f.rate);
+}
+
+export type EntryQuote = {
+  entry: number; fee: number; host: number; total: number;
+  fromCredit: number; fromVault: number; fromCard: number; funding: Funding;
+};
+
+/**
+ * What joining costs and who pays: entry credit first, then the Vault, then a
+ * card. When the balances cover everything at the balance price, no card is
+ * needed and the lower fee applies. A card never charges less than CARD_MIN,
+ * so a tiny card remainder takes a little less from the balances instead.
+ */
+export function quoteEntry(entryCents: number, kind: string, isPro: boolean, creditCents: number, vaultCents: number): EntryQuote {
+  const host = hostFee(entryCents, kind);
+  const credit = Math.max(0, creditCents);
+  const vault = Math.max(0, vaultCents);
+  const balanceFee = serviceFee(entryCents, isPro, "balance");
+  const balanceTotal = entryCents + balanceFee + host;
+  if (credit + vault >= balanceTotal) {
+    const fromCredit = Math.min(credit, balanceTotal);
+    return { entry: entryCents, fee: balanceFee, host, total: balanceTotal, fromCredit, fromVault: balanceTotal - fromCredit, fromCard: 0, funding: "balance" };
+  }
+  const fee = serviceFee(entryCents, isPro, "card");
+  const total = entryCents + fee + host;
+  let fromCredit = Math.min(credit, total);
+  let fromVault = Math.min(vault, total - fromCredit);
+  let fromCard = total - fromCredit - fromVault;
+  if (fromCard < CARD_MIN) {
+    const short = CARD_MIN - fromCard;
+    const lessVault = Math.min(short, fromVault);
+    fromVault -= lessVault;
+    fromCredit -= short - lessVault;
+    fromCard = CARD_MIN;
+  }
+  return { entry: entryCents, fee, host, total, fromCredit, fromVault, fromCard, funding: "card" };
 }
 
 export function hostFee(entryCents: number, kind: string): number {
@@ -145,30 +181,8 @@ export function windowSteps(hourly: number[], start: number | null, end: number 
   return hourly.slice(start, end).reduce((a, b) => a + b, 0);
 }
 
-/** A Stripe customer and an ephemeral key, for PaymentSheet. */
-// deno-lint-ignore no-explicit-any
-export async function stripeCustomer(db: SupabaseClient, userId: string, profile: any): Promise<string> {
-  let customerId = profile?.stripe_customer_id as string | undefined;
-  if (!customerId) {
-    const customer = await stripe.customers.create({ metadata: { user_id: userId } });
-    customerId = customer.id;
-    await db.from("profiles").update({ stripe_customer_id: customerId }).eq("id", userId);
-  }
-  return customerId;
-}
-
-/** First paid purse entry: the friend who invited you gets their bonus. */
+/** First paid purse entry: the friend who invited you gets their bonus, once (atomic in SQL). */
 export async function payReferral(db: SupabaseClient, userId: string, currency: string) {
-  const { data: ref } = await db.from("referrals").select("*").eq("invitee_id", userId).is("bonus_paid_at", null).maybeSingle();
-  if (!ref) return;
-  const { data: claimed } = await db.from("referrals").update({ bonus_paid_at: new Date().toISOString() })
-    .eq("invitee_id", userId).is("bonus_paid_at", null).select();
-  if (!claimed?.length) return; // someone else got there first
-  await db.rpc("adjust_balance", { uid: ref.inviter_id, vault_delta: INVITE_BONUS, credit_delta: 0 });
-  const { data: inviter } = await db.from("profiles").select("invites_paid").eq("id", ref.inviter_id).maybeSingle();
-  await db.from("profiles").update({ invites_paid: (inviter?.invites_paid ?? 0) + 1 }).eq("id", ref.inviter_id);
-  await db.from("ledger_entries").insert({
-    race_id: null, user_id: ref.inviter_id, kind: "referral", amount_cents: INVITE_BONUS, currency,
-    stripe_ref: `ref_${userId}`, label: "Friend joined a purse",
-  });
+  const { error } = await db.rpc("pay_referral", { invitee: userId, bonus: INVITE_BONUS, cur: currency });
+  if (error) console.error("pay_referral", userId, error.message);
 }

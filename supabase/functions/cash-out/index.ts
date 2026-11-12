@@ -12,7 +12,7 @@ Deno.serve(handler(async (req) => {
   const db = admin();
 
   const amount = Math.floor(body.amount_cents);
-  if (!Number.isInteger(amount) || amount < CASHOUT_MIN) throw new HttpError(400, "You can cash out from 25.");
+  if (!Number.isInteger(amount) || amount < CASHOUT_MIN) throw new HttpError(400, "You can cash out from 5.");
   if (!["bank", "paypal"].includes(body.method)) throw new HttpError(400, "Pick bank or PayPal.");
 
   const since = new Date(Date.now() - 24 * 3600_000).toISOString();

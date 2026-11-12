@@ -130,12 +130,12 @@ private struct JoinBar: View {
             NavigationLink(value: PurseJoin(purseID: purse.id)) {
                 HStack(spacing: 8) {
                     Image(systemName: "ticket.fill")
-                    Text("Join for \(Money(cents: q.entry + q.fee, currency: purse.currency).formatted)")
+                    Text("Join for \(Money(cents: q.total, currency: purse.currency).formatted)")
                 }
             }
             .buttonStyle(.primary)
             .shimmer()
-            Text(q.fee == 0 ? "No fee with Pro" : "\(purse.entry.formatted) entry + \(Money(cents: q.fee, currency: purse.currency).formatted) fee")
+            Text(q.fees == 0 ? "No fee with Pro" : "\(purse.entry.formatted) entry + \(Money(cents: q.fees, currency: purse.currency).formatted) fee")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Palette.inkSecondary)
         }

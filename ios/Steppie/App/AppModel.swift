@@ -587,12 +587,10 @@ final class AppModel {
         return nil
     }
 
-    /// What joining costs right now: entry plus fees, and how much the Vault covers.
-    func joinQuote(_ p: Purse) -> (entry: Int, fee: Int, fromVault: Int, fromCard: Int) {
-        let entry = p.entryUnits * 100
-        let fee = PurseFee.total(for: p, isPro: isPro)
-        let fromVault = min(profile.creditCents + profile.vaultCents, entry + fee)
-        return (entry, fee, fromVault, entry + fee - fromVault)
+    /// What joining costs right now and who pays: credit, then the Vault, then a card.
+    func joinQuote(_ p: Purse) -> PurseFee.Quote {
+        PurseFee.quote(entryCents: p.entryUnits * 100, kind: p.kind, isPro: isPro,
+                       creditCents: profile.creditCents, vaultCents: profile.vaultCents)
     }
 
     /// Joins a purse: pays from the Vault first, then the card. Returns false if
@@ -609,7 +607,7 @@ final class AppModel {
             graceAllowed: 0, stake: p.entry, stakeState: .charged, status: .pendingPayment,
             usesHold: false, cardLast4: nil, createdAt: .now, settledAt: nil,
             shieldsEquipped: min(shields, profile.shields, 2),
-            purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + q.entry, feeCents: q.fee, window: p.window)
+            purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + q.entry, feeCents: q.fees, window: p.window)
         )
 
         if !isDemo {
@@ -627,12 +625,11 @@ final class AppModel {
         } else {
             try await Task.sleep(for: .milliseconds(700))
             race.cardLast4 = q.fromCard > 0 ? "4242" : nil
-            let fromCredit = min(profile.creditCents, q.entry + q.fee)
-            profile.creditCents -= fromCredit
-            profile.vaultCents -= min(profile.vaultCents, q.fromVault - fromCredit)
+            profile.creditCents -= q.fromCredit
+            profile.vaultCents -= q.fromVault
             ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .entry, amount: p.entry, reference: "pe_demo_\(race.bibNumber)"), at: 0)
-            if q.fee > 0 {
-                ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .fee, amount: Money(cents: q.fee, currency: p.currency), reference: "fee_demo_\(race.bibNumber)"), at: 0)
+            if q.fees > 0 {
+                ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .fee, amount: Money(cents: q.fees, currency: p.currency), reference: "fee_demo_\(race.bibNumber)"), at: 0)
             }
         }
 
