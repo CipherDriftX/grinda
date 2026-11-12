@@ -4,7 +4,7 @@
 // free once a month with Pro. It's listed once paid; an unpaid one is called
 // off after an hour and its Vault part goes back.
 import {
-  admin, CARD_MIN, handler, HOST_CREATE_CENTS, HttpError, json, moneyError, requireUser,
+  admin, CARD_MIN, handler, HOST_CREATE_CENTS, HttpError, json, moneyError, proActive, requireUser,
 } from "../_shared/common.ts";
 import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
 import { createCheckout } from "../_shared/whop.ts";
@@ -55,7 +55,7 @@ Deno.serve(handler(async (req) => {
 
   // Public purses: free once a month with Pro, otherwise the host fee.
   const month = new Date().toISOString().slice(0, 7) + "-01";
-  const proFree = body.kind === "host" && profile.is_pro && profile.host_free_month !== month;
+  const proFree = body.kind === "host" && proActive(profile) && profile.host_free_month !== month;
   const fee = body.kind === "crew" || proFree ? 0 : HOST_CREATE_CENTS;
   let fromVault = profile.currency === body.currency || !profile.currency ? Math.min(profile.vault_cents ?? 0, fee) : 0;
   let fromCard = fee - fromVault;

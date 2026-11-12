@@ -2,7 +2,7 @@
 // Whop checkout for the rest. A finished stake comes back (card part refunded
 // to the card, Vault part to the Vault); a missed one is kept.
 import {
-  admin, COMEBACK, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, quoteStake, requireUser, scheduleDates,
+  admin, COMEBACK, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, proActive, quoteStake, requireUser, scheduleDates,
   settleInstant, startAllowed, TEMPLATES,
 } from "../_shared/common.ts";
 import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
@@ -63,7 +63,7 @@ Deno.serve(handler(async (req) => {
   const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (!found) throw new HttpError(403, "Finish setting up your profile first.");
   const profile = await ensureEligible(db, found, body, localToday(body.timezone));
-  const isPro = !!profile.is_pro;
+  const isPro = proActive(profile);
 
   // Stake tables: Champion (50+) after one finished race, Legend (100+) after three.
   if (body.stake_cents >= 5000) {

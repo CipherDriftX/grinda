@@ -4,7 +4,7 @@
 // the race live when the payment lands. An unpaid checkout is called off
 // after an hour (settle) or when the person closes it (cancel-checkout).
 import {
-  admin, consecutiveDates, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, quoteEntry, requireUser,
+  admin, consecutiveDates, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, proActive, quoteEntry, requireUser,
   settleInstant,
 } from "../_shared/common.ts";
 import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
@@ -36,8 +36,8 @@ Deno.serve(handler(async (req) => {
   const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (!found) throw new HttpError(403, "Finish setting up your profile first.");
   const profile = await ensureEligible(db, found, body, localToday(body.timezone));
-  if (purse.pro_only && !profile.is_pro) throw new HttpError(403, "This purse is for Steppie Pro members.");
-  const isPro = !!profile.is_pro;
+  const isPro = proActive(profile);
+  if (purse.pro_only && !isPro) throw new HttpError(403, "This purse is for Steppie Pro members.");
 
   // A checkout already open for this purse: hand back the same one, so a second
   // tap never makes a second payment.

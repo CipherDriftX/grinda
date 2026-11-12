@@ -25,3 +25,7 @@ verify_jwt = false
 
 [functions.public-stats]
 verify_jwt = false
+
+# Apple calls this; the body is only a pointer and the status is read back from Apple.
+[functions.app-store-notifications]
+verify_jwt = false

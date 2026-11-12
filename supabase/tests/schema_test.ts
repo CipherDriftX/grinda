@@ -88,3 +88,11 @@ Deno.test("a new account gets a profile row at once, with its Apple name if shar
   const q = await one<{ display_name: string | null }>(db, "select display_name from profiles where id = $1", [plain.id]);
   assertEquals(q.display_name, null);
 });
+
+Deno.test("a Shield purchase is granted once", async () => {
+  const db = await freshDb();
+  const id = await user(db);
+  const a = await one<{ n: number }>(db, "select grant_shields($1, '2000001', 'steppie.shield.3', 3) as n", [id]);
+  const b = await one<{ n: number }>(db, "select grant_shields($1, '2000001', 'steppie.shield.3', 3) as n", [id]);
+  assertEquals([a.n, b.n], [4, 4]); // one free Shield to start, plus three, once
+});
