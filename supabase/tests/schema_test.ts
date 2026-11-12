@@ -72,3 +72,19 @@ Deno.test("deleting an account keeps its money records, without the person", asy
   assertEquals([r.lines, r.outs, r.who], [1, 1, null]);
   await db.close();
 });
+
+Deno.test("a new account gets a profile row at once, with its Apple name if shared", async () => {
+  const db = await freshDb();
+  const named = await one<{ id: string }>(
+    db, `insert into auth.users (raw_user_meta_data) values ('{"full_name":"  Ada Lovelace  "}') returning id`,
+  );
+  const p = await one<{ display_name: string; invite_code: string; vault_cents: number }>(
+    db, "select display_name, invite_code, vault_cents from profiles where id = $1", [named.id],
+  );
+  assertEquals(p.display_name, "Ada Lovelace");
+  assertEquals(p.invite_code.startsWith("ADALO-"), true);
+  assertEquals(p.vault_cents, 0);
+  const plain = await one<{ id: string }>(db, "insert into auth.users default values returning id");
+  const q = await one<{ display_name: string | null }>(db, "select display_name from profiles where id = $1", [plain.id]);
+  assertEquals(q.display_name, null);
+});

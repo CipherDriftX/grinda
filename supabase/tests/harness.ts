@@ -6,7 +6,7 @@ import { PGlite } from "npm:@electric-sql/pglite@0.3.15";
 const STUBS = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth;
-create table auth.users (id uuid primary key default gen_random_uuid(), email text);
+create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('test.uid', true), '')::uuid $$;
 create schema storage;
@@ -50,7 +50,12 @@ export async function freshDbUpTo(stop: string): Promise<PGlite> {
 export async function user(db: PGlite, name = "Sam Walker", birthYear = 1990): Promise<string> {
   const { rows } = await db.query<{ id: string }>("insert into auth.users default values returning id");
   const id = rows[0].id;
-  await db.query("insert into public.profiles (id, display_name, birth_year) values ($1, $2, $3)", [id, name, birthYear]);
+  // The sign-up trigger made the profile; fill in what the app would send.
+  await db.query(
+    `insert into public.profiles (id, display_name, birth_year) values ($1, $2, $3)
+     on conflict (id) do update set display_name = excluded.display_name, birth_year = excluded.birth_year`,
+    [id, name, birthYear],
+  );
   return id;
 }
 
