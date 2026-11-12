@@ -1,16 +1,17 @@
 import SwiftUI
 
-/// Bo opens the vault: pick an amount and where it goes. Bank or PayPal,
-/// from $25, up to $500 a day. Entry credit stays for entries.
+/// Bo opens the vault: pick an amount, Whop pays it. From 5, up to 500 a
+/// day. Entry credit stays for entries.
 struct CashOutSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var cents = 0
-    @State private var method: CashOut.Method = .bank
     @State private var working = false
-    @State private var done = false
+    @State private var receipt: CashOut.Receipt?
     @State private var error: String?
     @State private var hop = 0
+
+    private var done: Bool { receipt != nil }
 
     private var maxCents: Int { min(model.profile.vaultCents, CashOut.dailyLimitCents) }
     private var canCash: Bool { maxCents >= CashOut.minimumCents }
@@ -20,11 +21,11 @@ struct CashOutSheet: View {
             ScrollView {
                 VStack(spacing: 24) {
                     hero
-                    if done {
-                        sentCard
+                    if let receipt {
+                        sentCard(receipt)
                     } else if canCash {
                         amount
-                        methods
+                        howItsPaid
                         Button {
                             Task { await cashOut() }
                         } label: {
@@ -32,7 +33,7 @@ struct CashOutSheet: View {
                         }
                         .buttonStyle(.primary)
                         .disabled(working || cents < CashOut.minimumCents)
-                        Text("Cash-outs are free. Limit \(Money(cents: CashOut.dailyLimitCents, currency: model.currency).formatted) a day. Entry credit can't be cashed out; it's for entries.")
+                        Text("Steppie takes no fee on cash-outs. Limit \(Money(cents: CashOut.dailyLimitCents, currency: model.currency).formatted) a day. Entry credit can't be cashed out; it's for entries.")
                             .font(.caption)
                             .foregroundStyle(Palette.inkSecondary)
                             .multilineTextAlignment(.center)
@@ -118,61 +119,67 @@ struct CashOutSheet: View {
         .buttonStyle(.pressable)
     }
 
-    private var methods: some View {
-        VStack(spacing: 10) {
-            ForEach(CashOut.Method.allCases) { m in
-                Button {
-                    Haptics.tick()
-                    withAnimation(Motion.snap) { method = m }
-                } label: {
-                    HStack(spacing: 14) {
-                        Image(systemName: m.symbol)
-                            .font(.title3)
-                            .frame(width: 30)
-                            .foregroundStyle(Palette.cobalt)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(m.title).font(.system(.headline, weight: .semibold))
-                            Text(m.timing).font(.footnote).foregroundStyle(Palette.inkSecondary)
-                        }
-                        Spacer()
-                        Image(systemName: method == m ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundStyle(method == m ? Palette.cobalt : Palette.hairline)
-                    }
-                    .foregroundStyle(Palette.ink)
-                    .padding(14)
-                    .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(method == m ? Palette.cobalt : .clear, lineWidth: 2)
-                    }
-                }
-                .buttonStyle(.pressable)
-                .accessibilityAddTraits(method == m ? .isSelected : [])
+    private var howItsPaid: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "arrow.up.forward.app.fill")
+                .font(.title3)
+                .frame(width: 30)
+                .foregroundStyle(Palette.cobalt)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Paid through Whop").font(.system(.headline, weight: .semibold))
+                Text("It goes to the Whop account you paid an entry with. From Whop you withdraw it to your bank. Haven't paid by card yet? You get a link to claim it on Whop.")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.inkSecondary)
             }
+            Spacer(minLength: 0)
         }
+        .foregroundStyle(Palette.ink)
+        .padding(14)
+        .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private var sentCard: some View {
+    private func sentCard(_ r: CashOut.Receipt) -> some View {
         VStack(spacing: 10) {
-            Text(Money(cents: cents, currency: model.currency).formatted)
+            Text(r.amount.formatted)
                 .font(BrandFont.numerals(56))
-            Text("to your \(method.title.lowercased()). \(method.timing).")
-                .font(.body)
-                .foregroundStyle(Palette.inkSecondary)
-                .multilineTextAlignment(.center)
-            Text("It's in your Vault history with a reference number. If it hasn't landed by then, write to us and a person will chase it.")
+            Text(note(r))
+            .font(.body)
+            .foregroundStyle(Palette.inkSecondary)
+            .multilineTextAlignment(.center)
+            if let url = r.claimURL, !r.delayed {
+                Link(destination: url) {
+                    Text("Claim it on Whop").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.primary)
+                .padding(.top, 8)
+            }
+            Text("It's in your Vault history. If something looks wrong, write to support and a person will chase it.")
                 .font(.footnote)
                 .foregroundStyle(Palette.inkSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
-            Button("Done") { dismiss() }
-                .buttonStyle(.primary)
-                .padding(.top, 8)
+            if r.claimURL == nil || r.delayed {
+                Button("Done") { dismiss() }
+                    .buttonStyle(.primary)
+                    .padding(.top, 8)
+            } else {
+                Button("Done") { dismiss() }
+                    .font(.headline)
+                    .padding(.top, 8)
+            }
         }
         .padding(18)
         .background(Palette.tyvek, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .transition(.scale(scale: 0.9).combined(with: .opacity))
+    }
+
+    private func note(_ r: CashOut.Receipt) -> String {
+        if r.delayed {
+            return "Whop didn't answer just now. The money has left your Vault and we keep trying for about a day. If it still fails, it comes back to your Vault."
+        }
+        guard r.method == .claimLink else { return "Sent to your Whop account. Withdraw it from Whop to your bank." }
+        let until = r.claimExpiresAt.map { " It works until \($0.formatted(date: .abbreviated, time: .shortened))." } ?? ""
+        return "Open the link and sign in to Whop to claim it.\(until) Unclaimed, it comes back to your Vault."
     }
 
     private var notYet: some View {
@@ -199,8 +206,8 @@ struct CashOutSheet: View {
         working = true
         defer { working = false }
         do {
-            try await model.cashOut(cents: cents, method: method)
-            withAnimation(Motion.snap) { done = true }
+            let r = try await model.cashOut(cents: cents)
+            withAnimation(Motion.snap) { receipt = r }
             hop += 1
         } catch {
             self.error = error.localizedDescription

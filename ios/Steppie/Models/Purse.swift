@@ -330,13 +330,21 @@ enum CashOut {
     static let minimumCents = 500   // a returned 5 stake can always be cashed out
     static let dailyLimitCents = 50_000
 
-    enum Method: String, CaseIterable, Identifiable {
-        case bank, paypal
+    /// How Whop pays it. The server picks: a transfer to the Whop account you
+    /// paid an entry with, or a claim link when there isn't one yet (USD only).
+    enum Method: String, Hashable {
+        case whop
+        case claimLink = "claim_link"
+    }
 
-        var id: String { rawValue }
-        var title: String { self == .bank ? "Bank account" : "PayPal" }
-        var symbol: String { self == .bank ? "building.columns.fill" : "envelope.fill" }
-        var timing: String { self == .bank ? "1 to 3 business days" : "Usually within a day" }
+    /// A cash-out the server accepted. The Vault is already debited.
+    struct Receipt: Hashable {
+        let amount: Money
+        let method: Method
+        let claimURL: URL?
+        let claimExpiresAt: Date?
+        /// Whop didn't answer yet; the server keeps trying for about a day.
+        let delayed: Bool
     }
 }
 

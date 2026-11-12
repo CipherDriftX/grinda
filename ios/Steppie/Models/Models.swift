@@ -232,7 +232,7 @@ enum LedgerKind: String, Codable, Hashable {
         case .held: "Hold placed"
         case .charged: "Stake paid"
         case .released: "Hold released"
-        case .refunded: "Refunded to card"
+        case .refunded: "Refunded"
         case .returned: "Back in your Vault"
         case .kept: "Stake kept"
         case .comeback: "Comeback refund"

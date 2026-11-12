@@ -19,12 +19,15 @@ final class APIClient {
     enum APIError: LocalizedError {
         case notConfigured
         case server(String)
+        /// A refusal the app acts on, e.g. "vault_not_empty" from delete-account.
+        case refused(code: String, message: String, vaultCents: Int?)
         case unauthorized
 
         var errorDescription: String? {
             switch self {
-            case .notConfigured: "Payments aren't set up in this build yet."
+            case .notConfigured: "This build isn't connected to the Steppie server."
             case .server(let m): m
+            case .refused(_, let m, _): m
             case .unauthorized: "Please sign in again."
             }
         }
@@ -38,9 +41,30 @@ final class APIClient {
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.keyDecodingStrategy = .convertFromSnakeCase
-        d.dateDecodingStrategy = .iso8601
+        // Postgres writes microseconds ("2026-11-12T09:30:00.123456+00:00"),
+        // which the plain .iso8601 strategy refuses.
+        d.dateDecodingStrategy = .custom { dec in
+            let s = try dec.singleValueContainer().decode(String.self)
+            guard let date = APIClient.date(from: s) else {
+                throw DecodingError.dataCorrupted(.init(codingPath: dec.codingPath, debugDescription: "Not a date: \(s)"))
+            }
+            return date
+        }
         return d
     }()
+
+    /// Reads ISO 8601 times with or without fractional seconds, and plain days.
+    static func date(from raw: String) -> Date? {
+        // Keep at most 3 fraction digits; the formatter is reliable with milliseconds.
+        let s = raw.replacingOccurrences(of: #"(\.\d{3})\d+"#, with: "$1", options: .regularExpression)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withFullDate]
+        return f.date(from: s)
+    }
 
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
@@ -246,10 +270,25 @@ final class APIClient {
 
     // MARK: Vault
 
-    func cashOut(cents: Int, method: String) async throws {
-        struct Body: Encodable { let amountCents: Int; let method: String }
-        struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/cash-out", body: Body(amountCents: cents, method: method))
+    /// A cash-out as the server made it. Whop pays it to the Whop account you
+    /// paid with ("whop"), or as a claim link ("claim_link") when there isn't one.
+    struct RemoteCashOut: Decodable {
+        let id: UUID
+        let amountCents: Int
+        let currency: String
+        let method: String
+        let status: String
+        let claimUrl: String?
+        let claimExpiresAt: Date?
+        let delayed: Bool
+    }
+
+    /// The server picks how it's paid; the app only says how much.
+    func cashOut(cents: Int) async throws -> RemoteCashOut {
+        struct Body: Encodable { let amountCents: Int }
+        struct Reply: Decodable { let cashout: RemoteCashOut }
+        let r: Reply = try await send("functions/v1/cash-out", body: Body(amountCents: cents))
+        return r.cashout
     }
 
     func redeemInvite(code: String) async throws {
@@ -299,7 +338,7 @@ final class APIClient {
         let kind: String
         let amountCents: Int
         let currency: String
-        let stripeRef: String
+        let ref: String?
     }
 
     func ledger() async throws -> [RemoteLedger] {
@@ -387,16 +426,23 @@ final class APIClient {
         if code == 401 { throw APIError.unauthorized }
         guard (200..<300).contains(code) else {
             let e = try? decoder.decode(ServerError.self, from: data)
-            throw APIError.server(e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code)).")
+            let message = e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code))."
+            if let c = e?.code, !c.isEmpty, e?.error != nil {
+                throw APIError.refused(code: c, message: message, vaultCents: e?.vaultCents)
+            }
+            throw APIError.server(message)
         }
         return try decoder.decode(T.self, from: data)
     }
 }
 
+/// Edge Functions answer {error, code?, vault_cents?}; PostgREST answers {message, code}.
 private struct ServerError: Decodable {
     let error: String?
     let message: String?
     let msg: String?
+    let code: String?
+    let vaultCents: Int?
 }
 
 /// Minimal Keychain wrapper for the auth session.

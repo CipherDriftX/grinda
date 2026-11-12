@@ -113,7 +113,7 @@ private struct Passbook: View {
                 }
                 .buttonStyle(.primary)
                 Text(model.profile.vaultCents >= CashOut.minimumCents
-                     ? "Split winnings land here. Use them for your next entry, or cash out to your bank or PayPal."
+                     ? "Split winnings land here. Use them for your next entry, or cash out through Whop."
                      : "Split winnings land here. You can cash out from \(Money(cents: CashOut.minimumCents, currency: model.currency).formatted).")
                     .font(.caption)
                     .foregroundStyle(Palette.inkSecondary)

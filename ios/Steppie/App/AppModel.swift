@@ -456,12 +456,18 @@ final class AppModel {
                 if wasLive && races[i].status == .won { finished(races[i]) }
             }
         }
-        if let remote = try? await api.ledger() {
-            ledger = remote.map {
-                LedgerEntry(id: $0.id, date: $0.createdAt, raceName: $0.raceName,
-                            kind: LedgerKind(rawValue: $0.kind) ?? .held,
-                            amount: Money(cents: $0.amountCents, currency: $0.currency), reference: $0.stripeRef)
-            }
+        await refreshLedger()
+        persist()
+    }
+
+    /// The Vault history as the server wrote it.
+    func refreshLedger() async {
+        guard !isDemo, api.isConfigured, api.session != nil, let remote = try? await api.ledger() else { return }
+        // Every kind the server writes is a LedgerKind; skipping an unknown one beats mislabeling money.
+        ledger = remote.compactMap { r in
+            guard let kind = LedgerKind(rawValue: r.kind) else { return nil }
+            return LedgerEntry(id: r.id, date: r.createdAt, raceName: r.raceName, kind: kind,
+                               amount: Money(cents: r.amountCents, currency: r.currency), reference: r.ref ?? "")
         }
         persist()
     }
@@ -488,7 +494,7 @@ final class AppModel {
     // MARK: Entering races
 
     enum EnterError: LocalizedError {
-        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, overDailyLimit, badCode, badLink
+        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, badCode, badLink
 
         var errorDescription: String? {
             switch self {
@@ -498,7 +504,6 @@ final class AppModel {
             case .alreadyRunning: "You already have a race running. Steppie Pro lets you run up to five at once."
             case .purseClosed: "This purse has already started. A new one opens every week."
             case .notEnoughToCashOut: "You can cash out from \(Money(cents: CashOut.minimumCents, currency: Money.localCurrency).formatted)."
-            case .overDailyLimit: "Cash-outs are limited to \(Money(cents: CashOut.dailyLimitCents, currency: Money.localCurrency).formatted) a day."
             case .badCode: "That code doesn't look right. Codes look like SAM-4821."
             case .badLink: "That link doesn't look right. Paste the full link to your post."
             }
@@ -743,20 +748,28 @@ final class AppModel {
 
     // MARK: Vault
 
-    func cashOut(cents: Int, method: CashOut.Method) async throws {
+    /// Sends Vault money out through Whop. The server checks the daily limit,
+    /// debits the Vault and picks how Whop pays it.
+    func cashOut(cents: Int) async throws -> CashOut.Receipt {
         guard cents >= CashOut.minimumCents, cents <= profile.vaultCents else { throw EnterError.notEnoughToCashOut }
-        let today = ledger.filter { $0.kind == .cashout && Calendar.current.isDateInToday($0.date) }.reduce(0) { $0 + $1.amount.cents }
-        guard today + cents <= CashOut.dailyLimitCents else { throw EnterError.overDailyLimit }
-        if isDemo || !api.isConfigured {
+        if isDemo {
             try await Task.sleep(for: .milliseconds(900))
-        } else {
-            try await api.cashOut(cents: cents, method: method.rawValue)
+            let amount = Money(cents: cents, currency: currency)
+            profile.vaultCents -= cents
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Cash-out", kind: .cashout, amount: amount, reference: "co_demo"), at: 0)
+            persist()
+            Haptics.success()
+            return CashOut.Receipt(amount: amount, method: .whop, claimURL: nil, claimExpiresAt: nil, delayed: false)
         }
-        profile.vaultCents -= cents
-        ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: method.title, kind: .cashout,
-                                  amount: Money(cents: cents, currency: currency), reference: "po_\(Int.random(in: 100_000...999_999))"), at: 0)
-        persist()
+        guard api.isConfigured else { throw APIClient.APIError.notConfigured }
+        let c = try await api.cashOut(cents: cents)
+        await refreshMe()
+        await refreshLedger()
         Haptics.success()
+        return CashOut.Receipt(amount: Money(cents: c.amountCents, currency: c.currency),
+                               method: CashOut.Method(rawValue: c.method) ?? .whop,
+                               claimURL: c.claimUrl.flatMap(URL.init(string:)),
+                               claimExpiresAt: c.claimExpiresAt, delayed: c.delayed)
     }
 
     /// A friend's code: $5 of entry credit for you now, $5 for them after your first paid entry.
