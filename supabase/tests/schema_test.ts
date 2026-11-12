@@ -60,3 +60,15 @@ Deno.test("only one settle run holds the lock at a time", async () => {
   assertEquals(await claim(), true);
   await db.close();
 });
+
+Deno.test("deleting an account keeps its money records, without the person", async () => {
+  const db = await freshDb();
+  const id = await user(db);
+  await db.query("update profiles set vault_cents = 900, currency = 'USD' where id = $1", [id]);
+  await db.query("select request_cashout($1, 900, 50000, 'whop', 'account_closed')", [id]);
+  await db.query("delete from auth.users where id = $1", [id]);
+  const r = await one<{ lines: number; outs: number; who: string | null }>(db,
+    "select (select count(*)::int from ledger_entries) as lines, (select count(*)::int from cashouts) as outs, (select user_id::text from cashouts) as who");
+  assertEquals([r.lines, r.outs, r.who], [1, 1, null]);
+  await db.close();
+});
