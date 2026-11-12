@@ -228,7 +228,7 @@ private struct MadePurse: View {
                     }
                 }
                 .buttonStyle(.pressable)
-                ShareLink(item: "Join my walking purse \(purse.name) on Steppie: \(purse.dailyGoal.formatted()) steps a day for \(purse.days) days, \(purse.entry.formatted) entry, finishers split it all. Code \(code)") {
+                ShareLink(item: "Join my walking purse \(purse.name) on Steppie: \(purse.dailyGoal.formatted()) steps a day for \(purse.days) days, \(purse.entry.formatted) entry, finishers split it all. Code \(code)" + (purse.shareURL.map { " or tap \($0.absoluteString)" } ?? "")) {
                     Label("Send the code", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.primary)

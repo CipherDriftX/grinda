@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Join a purse: Steppie</title>
+  <link rel="icon" href="assets/symbol-cobalt.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- A purse link a friend or creator shares: steppie.app/p.html?c=CODE.
+       With the app installed it opens the purse (steppie://p/CODE); without
+       it, the code is shown to type in after installing. -->
+  <header class="field"><div class="wrap"><nav><a href="./" aria-label="Steppie home"><img src="assets/lockup-white.svg" alt="Steppie"></a></nav></div></header>
+  <main class="doc">
+    <h1>You're invited to a walking purse</h1>
+    <p>Walk the daily goal every day and the finishers split the whole purse.</p>
+    <p class="meta">Purse code</p>
+    <p><strong id="code" style="font-size:2.4rem;letter-spacing:.04em">…</strong></p>
+    <p><a id="open" href="steppie://">Open it in Steppie</a></p>
+    <p>No app yet? <a href="./">Get Steppie</a>, then open Purses › Have a code? and type the code above. 18+ for paid purses.</p>
+  </main>
+  <footer><div class="wrap"><span>© 2026 Steppie</span><span><a href="privacy.html">Privacy</a> · <a href="support.html">Support</a> · <a href="rules.html">Race rules</a></span></div></footer>
+  <script>
+    var c = (new URLSearchParams(location.search).get('c') || '').trim().toUpperCase();
+    var ok = /^[A-Z0-9-]{4,16}$/.test(c);
+    document.getElementById('code').textContent = ok ? c : 'No code in this link';
+    if (ok) {
+      var app = 'steppie://p/' + encodeURIComponent(c);
+      document.getElementById('open').href = app;
+      location.href = app;
+    } else {
+      document.getElementById('open').remove();
+    }
+  </script>
+</body>
+</html>

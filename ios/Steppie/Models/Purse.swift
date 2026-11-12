@@ -102,6 +102,9 @@ struct Purse: Identifiable, Codable, Hashable {
     var sponsorCents = 0
     var hostName: String? = nil
     var code: String? = nil
+    /// A link that opens this purse in the app (site/p.html hands over to
+    /// steppie://p/CODE). The site must be served at steppie.app.
+    var shareURL: URL? { code.flatMap { URL(string: "https://steppie.app/p.html?c=\($0)") } }
     var cap: Int? = nil
     var proOnly = false
     /// People removed from this purse for fake steps (no names, ever).

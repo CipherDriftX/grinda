@@ -199,6 +199,7 @@ struct PurseEnteredOverlay: View {
     @State private var hop = 0
 
     private var ink: Color { Color(hex: purse.art.color) }
+    private var bonus: String { Money(cents: Invite.newMemberCreditCents, currency: purse.currency).formatted }
 
     var body: some View {
         ZStack {
@@ -241,8 +242,8 @@ struct PurseEnteredOverlay: View {
                     .foregroundStyle(.white.opacity(0.88))
                     .multilineTextAlignment(.center)
                 Spacer()
-                ShareLink(item: "I just joined a \(purse.pot.formatted) walking purse on Steppie. Finish every day, split the purse. Code \(model.inviteCode) gets you $5.") {
-                    Label("Bring a friend, both get $5", systemImage: "person.2.fill")
+                ShareLink(item: "I just joined a \(purse.pot.formatted) walking purse on Steppie. Finish every day, split the purse. My code \(model.inviteCode) gets you \(bonus) to start." + (purse.shareURL.map { " Join this purse: \($0.absoluteString)" } ?? "")) {
+                    Label("Bring a friend, both get \(bonus)", systemImage: "person.2.fill")
                 }
                 .buttonStyle(.onField)
                 Button("Go to today", action: onDone)
