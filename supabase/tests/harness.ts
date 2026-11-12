@@ -1,7 +1,7 @@
 // Runs every migration in supabase/migrations against an in-memory Postgres 17
 // (PGlite), with small stand-ins for what Supabase provides: the auth schema,
 // storage buckets and pg_cron. Lets the money SQL be tested without Docker.
-import { PGlite } from "npm:@electric-sql/pglite@0.3.4";
+import { PGlite } from "npm:@electric-sql/pglite@0.3.15";
 
 const STUBS = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
