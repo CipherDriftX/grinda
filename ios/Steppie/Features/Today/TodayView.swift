@@ -229,7 +229,7 @@ private struct ShadowRaceCard: View {
                 }
             }
             ShadowDots(days: Array(model.history.dropLast().suffix(7)), goal: model.profile.dailyGoal)
-            Text("People who put money on their walk hit their goal about 3 times in 4. Short races are only a hold on your card: finish, and nothing is ever charged.")
+            Text("People who put money on their walk hit their goal about 3 times in 4. Finish, and every cent of your stake comes back.")
                 .font(.subheadline)
                 .foregroundStyle(Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -253,7 +253,7 @@ private struct ShadowRaceCard: View {
     }
 
     private func headline(_ s: (hits: Int, days: Int)) -> String {
-        guard s.days >= 3 else { return "Your first race is one hold away." }
+        guard s.days >= 3 else { return "Your first race is one bib away." }
         if s.hits == s.days { return "\(s.hits) for \(s.days). With \(stake.formatted) on it, you'd have kept every cent." }
         if s.hits * 2 >= s.days { return "You hit your goal \(s.hits) of the last \(s.days) days. Money on it closes the gap." }
         return "\(s.hits) of \(s.days) days. A stake is the push that changes that."

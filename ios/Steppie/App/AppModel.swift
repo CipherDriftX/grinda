@@ -545,9 +545,9 @@ final class AppModel {
             bibNumber: Int.random(in: 1_000...9_999),
             days: dates.map { DayRecord(date: $0, steps: 0, goal: t.dailyGoal, state: .upcoming) },
             graceAllowed: t.graceDays, stake: stake,
-            stakeState: stake == nil ? .none : (t.usesHold ? .held : .charged),
+            stakeState: stake == nil ? .none : .charged,
             status: stake == nil ? .active : .pendingPayment,
-            usesHold: t.usesHold, cardLast4: nil, createdAt: .now, settledAt: nil,
+            createdAt: .now, settledAt: nil,
             shieldsEquipped: stake == nil ? 0 : min(shields, profile.shields, 2), comebackOf: comebackOf
         )
 
@@ -564,9 +564,8 @@ final class AppModel {
         } else if let stake {
             try await Task.sleep(for: .milliseconds(900))
             race.status = .active
-            race.cardLast4 = "4242"
-            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: t.name, kind: t.usesHold ? .held : .charged,
-                                      amount: stake, reference: "pi_demo_\(race.bibNumber)"), at: 0)
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: t.name, kind: .charged,
+                                      amount: stake, reference: "pay_demo_\(race.bibNumber)"), at: 0)
         }
 
         profile.shields -= race.shieldsEquipped
@@ -605,7 +604,7 @@ final class AppModel {
             bibNumber: Int.random(in: 1_000...9_999),
             days: dates.map { DayRecord(date: $0, steps: 0, goal: p.dailyGoal, state: .upcoming) },
             graceAllowed: 0, stake: p.entry, stakeState: .charged, status: .pendingPayment,
-            usesHold: false, cardLast4: nil, createdAt: .now, settledAt: nil,
+            createdAt: .now, settledAt: nil,
             shieldsEquipped: min(shields, profile.shields, 2),
             purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + q.entry, feeCents: q.fees, window: p.window)
         )
@@ -624,10 +623,9 @@ final class AppModel {
             }
         } else {
             try await Task.sleep(for: .milliseconds(700))
-            race.cardLast4 = q.fromCard > 0 ? "4242" : nil
             profile.creditCents -= q.fromCredit
             profile.vaultCents -= q.fromVault
-            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .entry, amount: p.entry, reference: "pe_demo_\(race.bibNumber)"), at: 0)
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .entry, amount: p.entry, reference: "pay_demo_\(race.bibNumber)"), at: 0)
             if q.fees > 0 {
                 ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .fee, amount: Money(cents: q.fees, currency: p.currency), reference: "fee_demo_\(race.bibNumber)"), at: 0)
             }

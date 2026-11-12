@@ -94,7 +94,7 @@ private struct SoloBoard: View {
     }
 }
 
-/// The 5-Day Sprint is the front door: a hold, never a charge, if you finish.
+/// The 5-Day Sprint is the front door: finish and the whole stake comes back.
 private struct FeaturedRace: View {
     let template: RaceTemplate
 
@@ -123,7 +123,7 @@ private struct FeaturedRace: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 Image(systemName: "lock.shield.fill")
-                Text("Card hold only. Released the moment you finish.")
+                Text("No fee. Finish, and all of it comes back.")
             }
             .font(.footnote.weight(.semibold))
             .foregroundStyle(.white)

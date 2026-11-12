@@ -157,10 +157,10 @@ private struct MoneyPath: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("How your money moves").font(.system(.title3, weight: .bold))
-            PathRow(steps: ["Hold placed", "You walk", "Hold released"],
-                    caption: "Races up to 5 days. Your money never leaves your account if you finish.")
-            PathRow(steps: ["Stake paid", "You walk", "Refunded in full"],
-                    caption: "Longer races. Refunds go out automatically within minutes of settling.")
+            PathRow(steps: ["Stake paid", "You walk", "Back in full"],
+                    caption: "Solo races. Vault money goes back to your Vault, card money to your card, when the race settles.")
+            PathRow(steps: ["Entry paid", "You walk", "Split the purse"],
+                    caption: "Purses. Finishers split every entry. Your share lands in your Vault; cash out from 5.")
         }
     }
 }
@@ -202,7 +202,7 @@ private struct LedgerList: View {
                 HStack(spacing: 12) {
                     SteppieView(mood: .sleep, mane: model.maneLevel)
                         .frame(width: 80, height: 92)
-                    Text("Nothing yet. When you pin a bib, every hold, charge, release and refund shows up here with its Stripe reference.")
+                    Text("Nothing yet. When you pin a bib, every payment, split, refund and cash-out shows up here with its reference.")
                         .font(.subheadline).foregroundStyle(Palette.inkSecondary)
                 }
             }
@@ -223,6 +223,7 @@ private struct LedgerRow: View {
         case .charged: "creditcard"
         case .released: "lock.open"
         case .refunded: "arrow.uturn.backward"
+        case .returned: "arrow.down.to.line"
         case .kept: "xmark"
         case .comeback: "arrow.uturn.backward.circle"
         case .entry: "ticket"
@@ -263,7 +264,7 @@ private struct LedgerRow: View {
 
     private var amountText: String {
         switch entry.kind {
-        case .released, .refunded, .comeback, .winnings, .credit, .referral, .hostFee: "+\(entry.amount.formatted)"
+        case .released, .refunded, .returned, .comeback, .winnings, .credit, .referral, .hostFee: "+\(entry.amount.formatted)"
         case .held: entry.amount.formatted
         case .charged, .kept, .entry, .fee, .cashout: "−\(entry.amount.formatted)"
         }

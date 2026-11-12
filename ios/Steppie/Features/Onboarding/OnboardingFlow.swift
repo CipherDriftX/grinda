@@ -182,7 +182,7 @@ private struct WelcomeStep: View {
                 .shimmer()
             HStack(spacing: 6) {
                 Image(systemName: "lock.fill")
-                Text("Payments by Stripe · Steps from Apple Health")
+                Text("Payments by Whop · Steps from Apple Health")
             }
             .font(.footnote.weight(.medium))
             .foregroundStyle(Palette.onFieldSecondary)

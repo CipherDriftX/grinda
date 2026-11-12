@@ -121,10 +121,7 @@ struct FinishView: View {
         if race.isPurse {
             return "You're in the split. The purse settles \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour())), after late syncs land, and your share goes straight to your Vault."
         }
-        let card = race.cardLast4.map { " ending \($0)" } ?? ""
-        return race.usesHold
-            ? "The \(stake.formatted) hold on your card\(card) is released. Nothing was charged."
-            : "\(stake.formatted) is on its way back to your card\(card). You earned that."
+        return "\(stake.formatted) comes back once the race settles: what you paid by card goes back to your card, what came from your Vault goes back to your Vault. You earned that."
     }
 
     private var statsLine: some View {

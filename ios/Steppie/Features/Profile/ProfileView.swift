@@ -134,24 +134,26 @@ private struct LegalText: View {
 
 enum Legal {
     static let rules = """
-    1. A race has a daily step goal, a number of days, and a stake you choose.
-    2. A day counts when Apple Health shows at least the goal for that calendar day in the time zone you started in. Manually entered steps are excluded.
-    3. Each day closes at midnight. Settlement runs 3 hours after the last day closes so delayed syncs are included.
-    4. Grace days, where included, automatically cover missed days, in order. Shields you equip when entering cover further missed days (up to 2 per race); unused Shields return to your locker after settlement.
-    5. Races of 5 days or fewer place an authorisation (hold) on your card. If you finish, the hold is released and nothing is charged. If you miss, the hold is captured.
-    6. Longer races charge the stake when you enter. If you finish, the full stake is refunded to the original payment method automatically.
+    1. A solo race has a daily step goal, a number of days, and a stake you choose (5 to 500).
+    2. A day counts when Apple Health shows at least the goal for that calendar day in the time zone you entered in. Manually entered steps are excluded. In a purse with a time window, only steps inside the window count.
+    3. Each day closes at midnight. Solo races settle 3 hours after the last day closes, purses a day after, so delayed syncs are included.
+    4. Grace days, where included, cover missed days first, then Shields you equipped (up to 2 per race). Unused Shields return to your locker after settlement.
+    5. You pay from your Vault first, then by card through Whop. Solo stakes have no fee. A checkout you don't finish within an hour is called off and anything taken from your Vault goes back.
+    6. Finish a solo race and the whole stake comes back when it settles: card payments are refunded to the card, Vault money goes back to your Vault.
     7. If you miss a day beyond your grace days and Shields, the stake is kept by Steppie.
-    7a. Comeback: within 72 hours of a missed staked race, you may enter one 5-day Comeback race at the same daily goal with a stake at least equal to the missed one. If you finish it, your Comeback stake is returned in full and 50% of the missed stake is refunded to its original payment method. A Comeback cannot itself have a Comeback.
+    7a. Comeback: within 72 hours of a missed solo race, you may enter one 5-day Comeback race at the same daily goal with a stake at least equal to the missed one. If you finish it, your Comeback stake comes back in full and so does half of the missed stake, the same way it was paid. A Comeback cannot itself have a Comeback.
     7b. Whether money comes back depends only on your steps. Grit, leagues, tables and Shoe Boxes are cosmetic and have no cash value.
-    8. Step data that looks physically impossible is reviewed by a person. A day under review is never marked as missed automatically.
-    9. If a verified sync problem caused a miss, contact support within 48 hours and we'll fix it.
-    10. Staked races are available to adults 18 and over, where permitted by local law.
+    8. Purses: you pay the entry plus a service fee (from your balance 0.50 + 4%, by card 0.99 + 5%; with Pro, nothing from your balance and 0.49 + 3% by card). Every entry goes into the purse and the people who finish split it equally. If nobody finishes, every entry goes back where it came from. Host purses add 5% of each entry for the host.
+    9. Step data that looks physically impossible, and screenshots you send for a missed day, are reviewed by a person. A day under review is never marked as missed automatically. In a purse only the share of an entry under review is held back; everyone else is paid on time.
+    10. Cash-outs leave your Vault from 5, up to 500 a day, to the Whop account you paid with, or as a claim link valid 7 days. A cash-out that fails or isn't claimed goes back to your Vault. A chargeback pauses cash-outs until a person has looked at it.
+    11. If a verified sync problem caused a miss, contact support within 48 hours and we'll fix it.
+    12. Paid races are for adults 18 and over (older where local law says so) and are not offered where paid contests aren't allowed. Money already in your Vault can always be cashed out.
     """
 
     static let privacy = """
     Steppie reads steps, walking distance and body weight from Apple Health, only to track races and show progress. Health data is never sold, shared with advertisers, or used for advertising.
 
-    Your account uses Sign in with Apple. Payments are processed by Stripe; Steppie never sees your full card number.
+    Your account uses Sign in with Apple. Card payments and cash-outs are processed by Whop; Steppie never sees your card number. We store your date of birth and where you live (country, and state where it matters) to check that paid races are allowed for you.
 
     We keep daily and hourly step totals for your races to settle them and prevent cheating. You can delete your account and data at any time in the app.
     """

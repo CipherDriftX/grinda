@@ -64,7 +64,7 @@ struct JoinPurseView: View {
 
     private func bib(_ p: Purse) -> some View {
         let dates = (0..<p.days).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: Calendar.current.startOfDay(for: p.startsAt)) }
-        return BibCard(name: p.name, bibNumber: 3_318, dailyGoal: p.dailyGoal, dayLabel: p.lengthLabel, stake: p.entry, usesHold: false,
+        return BibCard(name: p.name, bibNumber: 3_318, dailyGoal: p.dailyGoal, dayLabel: p.lengthLabel, stake: p.entry,
                        days: dates.map { DayRecord(date: $0, steps: 0, goal: p.dailyGoal, state: .upcoming) },
                        settles: p.settlesAt, pinned: pins,
                        purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + p.entryUnits * 100, feeCents: 0, window: p.window))
@@ -153,7 +153,7 @@ struct JoinPurseView: View {
                 }
                 .id(attempt)
             }
-            Text("Pinning means you agree to the Purse Rules. Card payments are handled by Stripe. 18+ only.")
+            Text("Pinning means you agree to the Purse Rules. Card payments are handled by Whop. 18+ only.")
                 .font(.caption)
                 .foregroundStyle(Palette.inkSecondary)
                 .multilineTextAlignment(.center)

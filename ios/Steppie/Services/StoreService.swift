@@ -2,7 +2,7 @@ import StoreKit
 
 /// Steppie Pro (subscription) and Steppie Shields (consumable), sold through
 /// StoreKit 2. Stakes never go through IAP: they are real-money commitments
-/// handled by Stripe, not digital goods.
+/// paid through Whop's checkout, not digital goods.
 @MainActor
 final class StoreService {
     static let groupID = "steppie.pro"

@@ -45,13 +45,13 @@ enum DemoSeed {
                 return DayRecord(date: day(o), steps: steps, goal: 10_000, state: state)
             },
             graceAllowed: 1, stake: Money(units: 20, currency: cur), stakeState: .charged, status: .active,
-            usesHold: false, cardLast4: "4242", createdAt: day(-3), settledAt: nil, shieldsEquipped: 1
+            createdAt: day(-3), settledAt: nil, shieldsEquipped: 1
         )
         let sprint = Race(
             id: UUID(), templateID: "sprint-5", name: "5-Day Sprint", dailyGoal: 8_000, bibNumber: 1_188,
             days: (0..<5).map { DayRecord(date: day(-12 + $0), steps: 8_600 + $0 * 410, goal: 8_000, state: .hit) },
-            graceAllowed: 0, stake: Money(units: 10, currency: cur), stakeState: .released, status: .won,
-            usesHold: true, cardLast4: "4242", createdAt: day(-12), settledAt: day(-6)
+            graceAllowed: 0, stake: Money(units: 10, currency: cur), stakeState: .returned, status: .won,
+            createdAt: day(-12), settledAt: day(-6)
         )
         let weekend = Race(
             id: UUID(), templateID: "weekend", name: "Weekend Warrior", dailyGoal: 12_000, bibNumber: 3_902,
@@ -59,13 +59,13 @@ enum DemoSeed {
                 DayRecord(date: day(-26 + i * 3), steps: i == 2 ? 9_870 : 12_900, goal: 12_000, state: i == 2 ? .missed : .hit)
             },
             graceAllowed: 0, stake: Money(units: 10, currency: cur), stakeState: .kept, status: .lost,
-            usesHold: false, cardLast4: "4242", createdAt: day(-27), settledAt: day(-16)
+            createdAt: day(-27), settledAt: day(-16)
         )
         let practice = Race(
             id: UUID(), templateID: "practice", name: "Practice Lap", dailyGoal: 7_000, bibNumber: 7_000,
             days: (0..<3).map { DayRecord(date: day(-31 + $0), steps: 7_450 + $0 * 300, goal: 7_000, state: .hit) },
             graceAllowed: 0, stake: nil, stakeState: .none, status: .won,
-            usesHold: false, cardLast4: nil, createdAt: day(-31), settledAt: day(-28)
+            createdAt: day(-31), settledAt: day(-28)
         )
         // Live purse: Lion's Share, day 4 of 7, the purse race on Today.
         let lions = livePurseRace()
@@ -75,7 +75,7 @@ enum DemoSeed {
             dailyGoal: 20_000, bibNumber: 5_031,
             days: [DayRecord(date: day(-9), steps: 21_480, goal: 20_000, state: .hit)],
             graceAllowed: 0, stake: Money(units: 10, currency: cur), stakeState: .charged, status: .won,
-            usesHold: false, cardLast4: "4242", createdAt: day(-11), settledAt: day(-8),
+            createdAt: day(-11), settledAt: day(-8),
             purse: PurseTicket(purseID: "one-and-done-41", entrants: 640, potCents: 640_000, feeCents: 90, window: nil, finishers: 571, payoutCents: 1_120)
         )
         return [lions, live, oneDay, sprint, weekend, practice]
@@ -95,7 +95,7 @@ enum DemoSeed {
                 return DayRecord(date: day(o), steps: steps, goal: 10_000, state: state)
             },
             graceAllowed: 0, stake: Money(units: 20, currency: cur), stakeState: .charged, status: .active,
-            usesHold: false, cardLast4: "4242", createdAt: day(-4), settledAt: nil, shieldsEquipped: 1,
+            createdAt: day(-4), settledAt: nil, shieldsEquipped: 1,
             purse: PurseTicket(purseID: lionsShareLiveID, entrants: 1_912, potCents: 1_912 * 2_000, feeCents: 130, window: nil)
         )
     }
@@ -185,16 +185,16 @@ enum DemoSeed {
             return LedgerEntry(id: UUID(), date: date, raceName: name, kind: kind, amount: Money(units: units, currency: cur), reference: ref)
         }
         return [
-            entry(-4, 9, "Lion's Share", .entry, 20, "pe_3QmL2a3318"),
+            entry(-4, 9, "Lion's Share", .entry, 20, "pay_4mL2a3318qW"),
             LedgerEntry(id: UUID(), date: Calendar.current.date(byAdding: .hour, value: 4, to: day(-8))!, raceName: "One and Done",
                         kind: .winnings, amount: Money(cents: 1_120, currency: cur), reference: "split_one-and-done-41"),
             entry(-9, 12, "Invite: Jonas", .referral, 5, "inv_SAM-4821_J"),
-            entry(-11, 18, "One and Done", .entry, 10, "pe_3QkA9b5031"),
-            entry(-3, 8, "10K Week", .charged, 20, "pi_3QkT8e2417"),
-            entry(-6, 3, "5-Day Sprint", .released, 10, "pi_3QhA1c1188"),
-            entry(-12, 7, "5-Day Sprint", .held, 10, "pi_3QhA1c1188"),
-            entry(-16, 3, "Weekend Warrior", .kept, 10, "pi_3QdR7w3902"),
-            entry(-27, 19, "Weekend Warrior", .charged, 10, "pi_3QdR7w3902"),
+            entry(-11, 18, "One and Done", .entry, 10, "pay_4kA9b5031tX"),
+            entry(-3, 8, "10K Week", .charged, 20, "pay_4kT8e2417mR"),
+            entry(-6, 3, "5-Day Sprint", .refunded, 10, "pay_4hA1c1188vB"),
+            entry(-12, 7, "5-Day Sprint", .charged, 10, "pay_4hA1c1188vB"),
+            entry(-16, 3, "Weekend Warrior", .kept, 10, "pay_4dR7w3902kP"),
+            entry(-27, 19, "Weekend Warrior", .charged, 10, "pay_4dR7w3902kP"),
         ]
     }
 
@@ -209,7 +209,7 @@ enum DemoSeed {
                 return DayRecord(date: day(-8 + i), steps: steps, goal: 10_000, state: steps >= 10_000 ? .hit : .missed)
             },
             graceAllowed: 1, stake: Money(units: 20, currency: cur), stakeState: .kept, status: .lost,
-            usesHold: false, cardLast4: "4242", createdAt: day(-8), settledAt: Calendar.current.date(byAdding: .hour, value: -20, to: .now)
+            createdAt: day(-8), settledAt: Calendar.current.date(byAdding: .hour, value: -20, to: .now)
         )
     }
 

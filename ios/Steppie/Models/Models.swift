@@ -65,11 +65,6 @@ struct RaceTemplate: Identifiable, Codable, Hashable {
     /// A Comeback race: finish it and half of a recent missed stake comes back too.
     var isComeback = false
 
-    /// Stripe card authorisations last 7 days, so races that settle within
-    /// ~6 days are a hold that is released on success. Longer races are
-    /// charged and refunded automatically.
-    var usesHold: Bool { kind == .staked && days <= 5 && schedule == .consecutive }
-
     var goalLabel: String {
         dailyGoal % 1000 == 0 ? "\(dailyGoal / 1000)K" : String(format: "%.1fK", Double(dailyGoal) / 1000)
     }
@@ -112,12 +107,13 @@ enum RaceStatus: String, Codable, Hashable {
 }
 
 enum StakeState: String, Codable, Hashable {
-    case none      // practice
-    case held      // card authorised, not charged
-    case charged   // paid, refundable on success
-    case released  // hold cancelled: money never moved
-    case refunded  // charge refunded in full
-    case kept      // missed: hold captured or charge kept
+    case none      // practice, or waiting for its checkout
+    case charged   // paid (card, Vault or both), comes back on a finish
+    case refunded  // finished: the card part went back to the card
+    case returned  // finished: the stake came back (Vault part to the Vault, card part to the card)
+    case kept      // missed: the stake was kept
+    // Card holds from the first version. No new race uses them; old rows still read.
+    case held, released
 }
 
 enum DayState: String, Codable, Hashable {
@@ -145,8 +141,6 @@ struct Race: Identifiable, Codable, Hashable {
     var stake: Money?
     var stakeState: StakeState
     var status: RaceStatus
-    var usesHold: Bool
-    var cardLast4: String?
     var createdAt: Date
     var settledAt: Date?
     /// Steppie Shields equipped on this race (0...2). Each covers one missed day,
@@ -169,10 +163,10 @@ struct Race: Identifiable, Codable, Hashable {
     var totalSteps: Int { days.reduce(0) { $0 + $1.steps } }
     var endDate: Date { days.last?.date ?? createdAt }
 
-    /// Settlement runs 3 hours after the final day closes, to let late
-    /// watch and tracker syncs arrive.
+    /// Settlement waits for late watch and tracker syncs: 3 hours after the
+    /// final day closes for a solo race, a full day for a purse (as the server does).
     var settlesAt: Date {
-        Calendar.current.date(byAdding: .hour, value: 27, to: endDate) ?? endDate
+        Calendar.current.date(byAdding: .hour, value: purse == nil ? 27 : 48, to: endDate) ?? endDate
     }
 
     var todayIndex: Int? {
@@ -230,7 +224,7 @@ struct PurseTicket: Codable, Hashable {
 // MARK: - Wallet
 
 enum LedgerKind: String, Codable, Hashable {
-    case held, charged, released, refunded, kept, comeback
+    case held, charged, released, refunded, returned, kept, comeback
     case entry, fee, winnings, cashout, credit, referral, hostFee
 
     var title: String {
@@ -238,7 +232,8 @@ enum LedgerKind: String, Codable, Hashable {
         case .held: "Hold placed"
         case .charged: "Stake paid"
         case .released: "Hold released"
-        case .refunded: "Refunded"
+        case .refunded: "Refunded to card"
+        case .returned: "Back in your Vault"
         case .kept: "Stake kept"
         case .comeback: "Comeback refund"
         case .entry: "Purse entry"
@@ -251,7 +246,7 @@ enum LedgerKind: String, Codable, Hashable {
         }
     }
 
-    var isReturn: Bool { [.released, .refunded, .comeback, .winnings, .referral, .hostFee, .credit].contains(self) }
+    var isReturn: Bool { [.released, .refunded, .returned, .comeback, .winnings, .referral, .hostFee, .credit].contains(self) }
 }
 
 struct LedgerEntry: Identifiable, Codable, Hashable {
@@ -260,7 +255,7 @@ struct LedgerEntry: Identifiable, Codable, Hashable {
     var raceName: String
     var kind: LedgerKind
     var amount: Money
-    var reference: String // Stripe PaymentIntent id
+    var reference: String // Whop payment (pay_...) or an internal move (bal_, ret_, split_, co_ ...)
 }
 
 // MARK: - Person
