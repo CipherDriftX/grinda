@@ -131,12 +131,12 @@ export const CASHOUT_MIN = 500;      // a 5 stake that comes back can always be 
 export const CASHOUT_DAILY = 50000;
 export const INVITE_CREDIT = 500;
 export const INVITE_BONUS = 500;
-/** Races (solo stakes and purse entries) one person can have running at once. */
 /** Pro counts only while the paid period (grace included) runs; see verify-pro. */
 export function proActive(p: { is_pro?: boolean | null; pro_expires_at?: string | null } | null, now = Date.now()): boolean {
   return !!p?.is_pro && !!p.pro_expires_at && new Date(p.pro_expires_at).getTime() > now;
 }
 
+/** Races (solo stakes and purse entries) one person can have running at once. */
 export function maxRunning(isPro: boolean): number {
   return isPro ? 5 : 1;
 }
