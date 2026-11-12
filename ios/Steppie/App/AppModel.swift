@@ -432,16 +432,28 @@ final class AppModel {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// Sends day totals + hourly buckets for server-side verification and settlement.
+    /// Sends day totals + hourly buckets for server-side checks and settlement.
     private func syncRaces() async {
         guard api.isConfigured, api.session != nil else { return }
         let fmt = Self.dayFormatter
-        for race in races where race.status == .active && !race.isPractice {
-            let days = race.days.filter { $0.date <= .now }.map { day -> APIClient.DaySubmission in
-                let hourly = Calendar.current.isDateInToday(day.date) ? todayHourly : []
-                return .init(date: fmt.string(from: day.date), steps: day.steps, hourly: hourly)
+        let live = races.filter { $0.status == .active && !$0.isPractice }
+        // Hourly buckets for today and yesterday: windowed purses count only the
+        // steps inside their hours, and a watch often syncs yesterday's last hours late.
+        var recent: [String: (total: Int, hourly: [Int])] = [:]
+        if !live.isEmpty {
+            let cal = Calendar.current
+            for offset in [0, -1] {
+                guard let d = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: .now)) else { continue }
+                if let s = try? await health.steps(on: d) { recent[fmt.string(from: d)] = s }
             }
-            try? await api.submitSteps(.init(raceId: race.id, days: days, attestation: nil))
+        }
+        for race in live {
+            let days = race.days.filter { $0.date <= .now }.map { day -> APIClient.DaySubmission in
+                let key = fmt.string(from: day.date)
+                if let s = recent[key] { return .init(date: key, steps: max(s.total, day.steps), hourly: s.hourly) }
+                return .init(date: key, steps: day.steps, hourly: [])
+            }
+            try? await api.submitSteps(.init(raceId: race.id, days: days))
         }
         if let remote = try? await api.races() {
             for r in remote {

@@ -178,7 +178,6 @@ final class APIClient {
     struct SubmitSteps: Encodable {
         let raceId: UUID
         let days: [DaySubmission]
-        let attestation: String?
     }
 
     func submitSteps(_ body: SubmitSteps) async throws {
