@@ -29,3 +29,7 @@ verify_jwt = false
 # Apple calls this; the body is only a pointer and the status is read back from Apple.
 [functions.app-store-notifications]
 verify_jwt = false
+
+# The review desk: guarded by ADMIN_SECRET, not a user login.
+[functions.admin-review]
+verify_jwt = false
