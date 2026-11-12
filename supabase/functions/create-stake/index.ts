@@ -2,18 +2,18 @@
 // Whop checkout for the rest. A finished stake comes back (card part refunded
 // to the card, Vault part to the Vault); a missed one is kept.
 import {
-  admin, COMEBACK, handler, HttpError, INVITE_BONUS, json, maxRunning, moneyError, quoteStake, requireUser, scheduleDates,
+  admin, COMEBACK, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, quoteStake, requireUser, scheduleDates,
   settleInstant, startAllowed, TEMPLATES,
 } from "../_shared/common.ts";
+import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
 import { createCheckout } from "../_shared/whop.ts";
 
-type Body = {
+type Body = Declared & {
   template_id: string;
   stake_cents: number;
   currency: "EUR" | "USD";
   timezone: string;
   start_date: string; // YYYY-MM-DD, local
-  birth_year?: number;
   shields_equipped?: number; // 0...2, taken from the person's locker
   comeback_of?: string | null; // a missed race this is the comeback for
 };
@@ -60,13 +60,9 @@ Deno.serve(handler(async (req) => {
     throw new HttpError(400, "A race starts today or tomorrow.");
   }
 
-  const { data: profile } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!profile) throw new HttpError(403, "Finish setting up your profile first.");
-  const birthYear = body.birth_year ?? profile.birth_year;
-  if (!birthYear || new Date().getUTCFullYear() - birthYear < 18) {
-    throw new HttpError(403, "Staked races are for adults 18 and over.");
-  }
-  if (!profile.birth_year) await db.from("profiles").update({ birth_year: birthYear }).eq("id", user.id);
+  const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!found) throw new HttpError(403, "Finish setting up your profile first.");
+  const profile = await ensureEligible(db, found, body, localToday(body.timezone));
   const isPro = !!profile.is_pro;
 
   // Stake tables: Champion (50+) after one finished race, Legend (100+) after three.

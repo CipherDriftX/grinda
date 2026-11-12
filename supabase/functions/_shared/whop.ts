@@ -243,6 +243,7 @@ export type WhopPayment = {
   refunded_amount?: Money | number | string | null;
   refundable?: boolean;
   checkout_configuration_id?: string | null;
+  billing_address?: { country?: string | null; state?: string | null } | null;
 };
 
 export type WhopEvent = {

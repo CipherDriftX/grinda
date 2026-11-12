@@ -1,8 +1,8 @@
 // Whop webhook. Checks the Standard Webhooks signature, stores the event id
 // first (Whop delivers at least once), then books the money:
 //   payment.succeeded   a race goes live or a host purse is listed; a payment
-//                       nothing can take (race called off, paid twice, short)
-//                       is refunded at once
+//                       nothing can take (race called off, paid twice, short,
+//                       or a card billed in a blocked region) is refunded at once
 //   dispute.created     cash-outs stop for that person until someone looks
 //   transfer.completed  a cash-out is paid
 //   transfer.failed     a cash-out failed: the money goes back to the Vault
@@ -10,6 +10,7 @@
 // forgotten and a 500 goes back, so Whop retries it.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { admin, INVITE_BONUS, json } from "../_shared/common.ts";
+import { isBlocked, normCountry, normRegion, readRules } from "../_shared/eligibility.ts";
 import {
   getPayment, refundPayment, SignatureError, toCents, verifyWhopWebhook, type WhopEvent, type WhopPayment,
 } from "../_shared/whop.ts";
@@ -61,6 +62,16 @@ async function paid(db: SupabaseClient, pay: WhopPayment): Promise<string> {
   const cents = toCents(pay.total ?? pay.subtotal);
   const cur = pay.currency ?? "";
   const whopUser = pay.user?.id ?? null;
+
+  // The app asks where people live; the card's billing address is a second
+  // check. Billed in a blocked region: call the entry off and refund it.
+  const country = normCountry(pay.billing_address?.country);
+  if (country && isBlocked({ country, region: normRegion(country, pay.billing_address?.state) }, readRules())) {
+    if (meta.kind === "race" && UUID.test(meta.race_id ?? "")) await db.rpc("cancel_pending", { rid: meta.race_id });
+    if (meta.kind === "host" && meta.purse_id) await db.rpc("cancel_host_purse", { pid: meta.purse_id });
+    await refundOnce(pay.id, "blocked_region");
+    return "blocked region: refunded";
+  }
 
   let state: string;
   if (meta.kind === "race" && UUID.test(meta.race_id ?? "")) {

@@ -7,12 +7,12 @@ import {
   admin, consecutiveDates, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, quoteEntry, requireUser,
   settleInstant,
 } from "../_shared/common.ts";
+import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
 import { createCheckout } from "../_shared/whop.ts";
 
-type Body = {
+type Body = Declared & {
   purse_id: string;
   timezone: string;
-  birth_year?: number | null;
   shields_equipped?: number;
 };
 
@@ -33,11 +33,9 @@ Deno.serve(handler(async (req) => {
   // Open until the first day starts for this walker.
   if (purse.starts_on <= localToday(body.timezone)) throw new HttpError(409, "This purse has already started. A new one opens every week.");
 
-  const { data: profile } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!profile) throw new HttpError(403, "Finish setting up your profile first.");
-  const birthYear = body.birth_year ?? profile.birth_year;
-  if (!birthYear || new Date().getUTCFullYear() - birthYear < 18) throw new HttpError(403, "Purses are for adults 18 and over.");
-  if (!profile.birth_year) await db.from("profiles").update({ birth_year: birthYear }).eq("id", user.id);
+  const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!found) throw new HttpError(403, "Finish setting up your profile first.");
+  const profile = await ensureEligible(db, found, body, localToday(body.timezone));
   if (purse.pro_only && !profile.is_pro) throw new HttpError(403, "This purse is for Steppie Pro members.");
   const isPro = !!profile.is_pro;
 

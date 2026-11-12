@@ -6,9 +6,10 @@
 import {
   admin, CARD_MIN, handler, HOST_CREATE_CENTS, HttpError, json, moneyError, requireUser,
 } from "../_shared/common.ts";
+import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
 import { createCheckout } from "../_shared/whop.ts";
 
-type Body = {
+type Body = Declared & {
   name: string;
   kind: "crew" | "host";
   daily_goal: number;
@@ -40,10 +41,10 @@ Deno.serve(handler(async (req) => {
   const tomorrow = new Date(Date.now() + 12 * 3600_000).toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startsOn ?? "") || startsOn < tomorrow) throw new HttpError(400, "Purses start tomorrow at the earliest.");
 
-  const { data: profile } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!profile?.birth_year || new Date().getUTCFullYear() - profile.birth_year < 18) {
-    throw new HttpError(403, "Purses are for adults 18 and over.");
-  }
+  const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!found) throw new HttpError(403, "Finish setting up your profile first.");
+  // Every entrant is checked when they join; the host is checked here, crew purses too.
+  const profile = await ensureEligible(db, found, body, new Date().toISOString().slice(0, 10));
 
   // A public purse still waiting for its card: hand back the same checkout.
   const { data: open } = await db.from("purses").select("*").eq("host_id", user.id).eq("listed", false)
