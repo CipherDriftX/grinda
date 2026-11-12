@@ -101,18 +101,45 @@ final class APIClient {
         var comebackOf: UUID? = nil
     }
 
-    struct CreateStakeReply: Decodable {
-        let raceId: UUID
-        let bibNumber: Int
-        let paymentIntentClientSecret: String
-        let customerId: String
-        let ephemeralKey: String
-        let publishableKey: String
-        let captureMethod: String // "manual" (hold) or "automatic"
+    /// A Whop hosted checkout for the part a card pays.
+    struct Checkout: Decodable, Hashable {
+        let id: String?
+        let url: String
     }
 
-    func createStake(_ req: CreateStakeRequest) async throws -> CreateStakeReply {
+    /// A new solo race or purse entry. `checkout` is nil when the Vault (and
+    /// entry credit) paid all of it and the race is already live.
+    struct EntryReply: Decodable {
+        let raceId: UUID
+        let bibNumber: Int
+        let checkout: Checkout?
+    }
+
+    func createStake(_ req: CreateStakeRequest) async throws -> EntryReply {
         try await send("functions/v1/create-stake", body: req)
+    }
+
+    /// Calls off an unpaid checkout. True when it was called off; false when
+    /// the payment had already landed.
+    func cancelCheckout(raceID: UUID) async throws -> Bool {
+        struct Body: Encodable { let raceId: UUID }
+        struct Reply: Decodable { let cancelled: Bool }
+        let r: Reply = try await send("functions/v1/cancel-checkout", body: Body(raceId: raceID))
+        return r.cancelled
+    }
+
+    func cancelCheckout(purseID: String) async throws -> Bool {
+        struct Body: Encodable { let purseId: String }
+        struct Reply: Decodable { let cancelled: Bool }
+        let r: Reply = try await send("functions/v1/cancel-checkout", body: Body(purseId: purseID))
+        return r.cancelled
+    }
+
+    /// The server's status for one of your races ("pendingPayment", "active", ...).
+    func raceStatus(_ id: UUID) async throws -> String? {
+        struct Row: Decodable { let status: String }
+        let rows: [Row] = try await get("rest/v1/races?select=status&id=eq.\(id.uuidString.lowercased())")
+        return rows.first?.status
     }
 
     struct DaySubmission: Encodable {
@@ -176,14 +203,7 @@ final class APIClient {
         var shieldsEquipped: Int = 0
     }
 
-    struct JoinPurseReply: Decodable {
-        let raceId: UUID
-        let bibNumber: Int
-        /// Missing when the Vault balance covered the whole entry.
-        let payment: CreateStakeReply?
-    }
-
-    func joinPurse(_ req: JoinPurseRequest) async throws -> JoinPurseReply {
+    func joinPurse(_ req: JoinPurseRequest) async throws -> EntryReply {
         try await send("functions/v1/join-purse", body: req)
     }
 
@@ -257,8 +277,8 @@ final class APIClient {
     struct HostPurseReply: Decodable {
         let purse: Purse
         /// Set when a public purse's host fee needs a card (Vault first, free
-        /// once a month with Pro).
-        let payment: CreateStakeReply?
+        /// once a month with Pro). The purse is listed once it's paid.
+        let checkout: Checkout?
     }
 
     /// Creates a member purse. The server picks the code.

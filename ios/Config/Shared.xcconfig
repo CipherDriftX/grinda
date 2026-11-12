@@ -2,5 +2,4 @@
 // NOTE: "//" starts a comment in xcconfig, so write URLs as https:/$()/example.supabase.co
 STEPPIE_SUPABASE_URL =
 STEPPIE_SUPABASE_ANON_KEY =
-STEPPIE_STRIPE_PUBLISHABLE_KEY =
 #include? "Secrets.xcconfig"

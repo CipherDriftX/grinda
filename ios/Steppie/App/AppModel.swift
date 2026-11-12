@@ -325,14 +325,7 @@ final class AppModel {
         await refresh()
         if !isDemo, api.isConfigured {
             publicStats = try? await api.publicStats()
-            if let me = try? await api.me() {
-                profile.shields = me.shields
-                profile.league = League(rawValue: me.league) ?? profile.league
-                profile.vaultCents = me.vaultCents ?? profile.vaultCents
-                profile.creditCents = me.creditCents ?? profile.creditCents
-                profile.inviteCode = me.inviteCode ?? profile.inviteCode
-                persist()
-            }
+            await refreshMe()
         }
         await loadPurses()
     }
@@ -533,8 +526,8 @@ final class AppModel {
         return out
     }
 
-    /// Creates the race, takes payment (or a hold) and activates it.
-    /// Returns false if the person cancelled the payment sheet.
+    /// Creates the race and takes the stake: Vault first, then Whop's checkout
+    /// for the rest. Returns false if the person closed the checkout.
     @discardableResult
     func enter(_ t: RaceTemplate, stake units: Int?, startingToday: Bool, shields: Int = 0, comebackOf: UUID? = nil) async throws -> Bool {
         if let e = canEnter(t) { throw e }
@@ -559,8 +552,14 @@ final class AppModel {
             ))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
-            guard try await payments.pay(reply, currency: stake.currency) == .paid else { return false }
             race.status = .active
+            if let checkout = reply.checkout {
+                switch try await pay(checkout, race: reply.raceId) {
+                case .cancelled: return false
+                case .live: break
+                case .waiting: race.status = .pendingPayment
+                }
+            }
         } else if let stake {
             try await Task.sleep(for: .milliseconds(900))
             race.status = .active
@@ -572,6 +571,7 @@ final class AppModel {
         races.insert(race, at: 0)
         reconcileRaces()
         writeWidget()
+        await refreshMe()
         return true
     }
 
@@ -592,8 +592,8 @@ final class AppModel {
                        creditCents: profile.creditCents, vaultCents: profile.vaultCents)
     }
 
-    /// Joins a purse: pays from the Vault first, then the card. Returns false if
-    /// the person closed the payment sheet.
+    /// Joins a purse: pays from entry credit, then the Vault, then Whop's
+    /// checkout. Returns false if the person closed the checkout.
     @discardableResult
     func join(_ p: Purse, shields: Int) async throws -> Bool {
         if let e = canJoin(p) { throw e }
@@ -614,14 +614,16 @@ final class AppModel {
                                                       birthYear: profile.birthYear, shieldsEquipped: race.shieldsEquipped))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
-            if let pay = reply.payment {
-                guard try await payments.pay(pay, currency: p.currency, label: "Pay entry") == .paid else { return false }
-            }
-            if let me = try? await api.me() {
-                profile.vaultCents = me.vaultCents ?? profile.vaultCents
-                profile.creditCents = me.creditCents ?? profile.creditCents
+            race.status = .active
+            if let checkout = reply.checkout {
+                switch try await pay(checkout, race: reply.raceId) {
+                case .cancelled: return false
+                case .live: break
+                case .waiting: race.status = .pendingPayment
+                }
             }
         } else {
+            race.status = .active
             try await Task.sleep(for: .milliseconds(700))
             profile.creditCents -= q.fromCredit
             profile.vaultCents -= q.fromVault
@@ -631,7 +633,6 @@ final class AppModel {
             }
         }
 
-        race.status = .active
         profile.shields -= race.shieldsEquipped
         races.insert(race, at: 0)
         if let i = purses.firstIndex(where: { $0.id == p.id }) {
@@ -641,7 +642,68 @@ final class AppModel {
         }
         reconcileRaces()
         writeWidget()
+        await refreshMe()
         return true
+    }
+
+    // MARK: Payments
+
+    enum PaymentResult { case live, waiting, cancelled }
+
+    /// Opens Whop's checkout for a race, then asks the server until Whop's
+    /// webhook has made it live. Closed without paying, the race is called off
+    /// at once so the Vault part and Shields come back.
+    private func pay(_ checkout: APIClient.Checkout, race id: UUID) async throws -> PaymentResult {
+        guard let url = URL(string: checkout.url) else { throw APIClient.APIError.server("That checkout link is broken. Try again.") }
+        let paid = try await payments.open(url)
+        for wait in paid ? [1, 1, 1, 2, 2, 3, 3] : [1, 2] {
+            if (try? await api.raceStatus(id)) == "active" { return .live }
+            try? await Task.sleep(for: .seconds(wait))
+        }
+        if (try? await api.raceStatus(id)) == "active" { return .live }
+        // Paid, but the webhook is slow: the race shows as waiting and the next sync picks it up.
+        if paid { return .waiting }
+        if (try? await api.cancelCheckout(raceID: id)) == false, (try? await api.raceStatus(id)) == "active" { return .live }
+        return .cancelled
+    }
+
+    /// The host fee for a public purse. It's listed when Whop's webhook lands.
+    private func payHostFee(_ checkout: APIClient.Checkout, purse id: String) async throws -> Bool {
+        guard let url = URL(string: checkout.url) else { throw APIClient.APIError.server("That checkout link is broken. Try again.") }
+        if try await payments.open(url) { return true }
+        // Closed: call it off unless the payment already landed.
+        return (try? await api.cancelCheckout(purseID: id)) == false
+    }
+
+    /// Balances and Shields as the server has them.
+    func refreshMe() async {
+        guard !isDemo, api.isConfigured, let me = try? await api.me() else { return }
+        profile.shields = me.shields
+        profile.league = League(rawValue: me.league) ?? profile.league
+        profile.vaultCents = me.vaultCents ?? profile.vaultCents
+        profile.creditCents = me.creditCents ?? profile.creditCents
+        profile.inviteCode = me.inviteCode ?? profile.inviteCode
+        persist()
+    }
+
+    /// Links into the app: steppie://paid (back from a checkout opened
+    /// outside the app) and steppie://p/CODE (a purse code from a friend).
+    func open(_ url: URL) async {
+        guard url.scheme == "steppie" else { return }
+        switch url.host {
+        case "paid":
+            await refresh()
+            await refreshMe()
+        case "p":
+            let code = url.pathComponents.dropFirst().first ?? ""
+            guard !code.isEmpty, let p = await findPurse(code: code) else { return }
+            tab = .races
+            racesMode = .purses
+            racesPath = NavigationPath()
+            racesPath.append(p)
+        default:
+            break
+        }
     }
 
     func loadPurses() async {
@@ -734,9 +796,10 @@ final class AppModel {
         if !isDemo && api.isConfigured {
             let reply = try await api.hostPurse(.init(name: name, kind: kind.rawValue, dailyGoal: dailyGoal, days: days,
                                                       entryUnits: entryUnits, currency: currency, startsAt: startsAt))
-            if let pay = reply.payment {
-                guard try await payments.pay(pay, currency: currency, label: "Pay host fee") == .paid else { return nil }
+            if let checkout = reply.checkout {
+                guard try await payHostFee(checkout, purse: reply.purse.id) else { return nil }
             }
+            await refreshMe()
             p = reply.purse
         } else {
             try await Task.sleep(for: .milliseconds(700))

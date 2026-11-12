@@ -2,7 +2,8 @@ name: Release to TestFlight / App Store
 
 # Run manually from the Actions tab. Requires these repository secrets:
 #   APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8_BASE64
-#   STEPPIE_SUPABASE_URL, STEPPIE_SUPABASE_ANON_KEY, STEPPIE_STRIPE_PUBLISHABLE_KEY
+#   STEPPIE_SUPABASE_URL, STEPPIE_SUPABASE_ANON_KEY
+# Card payments run on Whop's hosted checkout, so the app holds no payment keys.
 on:
   workflow_dispatch:
     inputs:
@@ -43,7 +44,6 @@ jobs:
           cat > Config/Secrets.xcconfig <<EOF
           STEPPIE_SUPABASE_URL = ${ESC_URL}
           STEPPIE_SUPABASE_ANON_KEY = ${{ secrets.STEPPIE_SUPABASE_ANON_KEY }}
-          STEPPIE_STRIPE_PUBLISHABLE_KEY = ${{ secrets.STEPPIE_STRIPE_PUBLISHABLE_KEY }}
           EOF
 
       - name: Generate project

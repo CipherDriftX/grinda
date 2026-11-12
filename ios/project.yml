@@ -16,10 +16,6 @@ settings:
     DEVELOPMENT_TEAM: ${STEPPIE_TEAM_ID}
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_EMIT_LOC_STRINGS: YES
-packages:
-  Stripe:
-    url: https://github.com/stripe/stripe-ios-spm
-    from: "24.0.0"
 targets:
   Steppie:
     type: application
@@ -28,8 +24,6 @@ targets:
       - path: Steppie
     resources: []
     dependencies:
-      - package: Stripe
-        product: StripePaymentSheet
       - target: SteppieWidget
         embed: true
     entitlements:
@@ -40,8 +34,6 @@ targets:
         com.apple.developer.healthkit.background-delivery: true
         com.apple.developer.applesignin: [Default]
         com.apple.security.application-groups: [group.com.cipherdriftx.steppie]
-        com.apple.developer.in-app-payments: [merchant.com.cipherdriftx.steppie]
-        com.apple.developer.devicecheck.appattest-environment: production
     info:
       path: Steppie/Info.plist
       properties:
@@ -69,7 +61,6 @@ targets:
         NSHealthUpdateUsageDescription: "Steppie can save the weight you log in the app to Apple Health so all your data stays in one place."
         SteppieSupabaseURL: $(STEPPIE_SUPABASE_URL)
         SteppieSupabaseAnonKey: $(STEPPIE_SUPABASE_ANON_KEY)
-        SteppieStripePublishableKey: $(STEPPIE_STRIPE_PUBLISHABLE_KEY)
         SteppieAppGroup: group.com.cipherdriftx.steppie
     settings:
       base:

@@ -1,60 +1,51 @@
-import SwiftUI
+import AuthenticationServices
 import UIKit
-#if canImport(StripePaymentSheet)
-import StripePaymentSheet
-#endif
 
-/// Presents Stripe PaymentSheet (Apple Pay first) for a stake.
-/// Holds use `capture_method=manual` on the server; the sheet is identical.
+/// Card payments go through Whop's hosted checkout, opened in Apple's secure
+/// web sheet. After paying, Whop sends the buyer to the server's
+/// WHOP_REDIRECT_URL (site/paid.html), which hands over to `steppie://paid`
+/// and closes the sheet. The race or purse goes live when Whop's webhook
+/// reaches the server, never because the phone says so.
 @MainActor
-final class PaymentService {
-    enum Outcome {
-        case paid
-        case cancelled
-    }
+final class PaymentService: NSObject, ASWebAuthenticationPresentationContextProviding {
+    private var session: ASWebAuthenticationSession?
 
-    static let merchantID = "merchant.com.cipherdriftx.steppie"
-
-    func pay(_ reply: APIClient.CreateStakeReply, currency: String, label: String? = nil) async throws -> Outcome {
-        #if canImport(StripePaymentSheet)
-        STPAPIClient.shared.publishableKey = reply.publishableKey
-        var config = PaymentSheet.Configuration()
-        config.merchantDisplayName = "Steppie"
-        config.customer = .init(id: reply.customerId, ephemeralKeySecret: reply.ephemeralKey)
-        config.applePay = .init(merchantId: Self.merchantID, merchantCountryCode: currency == "USD" ? "US" : "DE")
-        config.allowsDelayedPaymentMethods = false
-        config.returnURL = "steppie://stripe-redirect"
-        config.primaryButtonLabel = label ?? (reply.captureMethod == "manual" ? "Place hold" : "Pay stake")
-
-        var appearance = PaymentSheet.Appearance()
-        appearance.colors.primary = UIColor(Palette.cobalt)
-        appearance.cornerRadius = 12
-        appearance.primaryButton.cornerRadius = 14
-        config.appearance = appearance
-
-        let sheet = PaymentSheet(paymentIntentClientSecret: reply.paymentIntentClientSecret, configuration: config)
-        guard let presenter = UIApplication.shared.topViewController else { throw APIClient.APIError.server("Can't show payment sheet.") }
-        return try await withCheckedThrowingContinuation { cont in
-            sheet.present(from: presenter) { result in
-                switch result {
-                case .completed: cont.resume(returning: .paid)
-                case .canceled: cont.resume(returning: .cancelled)
-                case .failed(let error): cont.resume(throwing: error)
+    /// Shows the checkout. True when Whop sent the buyer back (they paid),
+    /// false when they closed the sheet.
+    func open(_ url: URL) async throws -> Bool {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Bool, Error>) in
+            let done: (URL?, Error?) -> Void = { callback, error in
+                if let error = error as? ASWebAuthenticationSessionError, error.code == .canceledLogin {
+                    cont.resume(returning: false)
+                } else if let error {
+                    cont.resume(throwing: error)
+                } else {
+                    cont.resume(returning: callback?.host == "paid")
                 }
             }
+            let s: ASWebAuthenticationSession
+            if #available(iOS 17.4, *) {
+                s = ASWebAuthenticationSession(url: url, callback: .customScheme("steppie"), completionHandler: done)
+            } else {
+                s = ASWebAuthenticationSession(url: url, callbackURLScheme: "steppie", completionHandler: done)
+            }
+            s.presentationContextProvider = self
+            // Keep Whop's sign-in between payments, so a returning buyer doesn't type it all again.
+            s.prefersEphemeralWebBrowserSession = false
+            session = s
+            if !s.start() {
+                session = nil
+                cont.resume(throwing: APIClient.APIError.server("Couldn't open the checkout. Try again."))
+            }
         }
-        #else
-        throw APIClient.APIError.notConfigured
-        #endif
     }
-}
 
-extension UIApplication {
-    var topViewController: UIViewController? {
-        let scene = connectedScenes.compactMap { $0 as? UIWindowScene }.first { $0.activationState == .foregroundActive }
-            ?? connectedScenes.compactMap { $0 as? UIWindowScene }.first
-        var top = scene?.windows.first { $0.isKeyWindow }?.rootViewController
-        while let presented = top?.presentedViewController { top = presented }
-        return top
+    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        MainActor.assumeIsolated {
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+            if let window = scene?.keyWindow ?? scene?.windows.first { return window }
+            return scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
+        }
     }
 }
