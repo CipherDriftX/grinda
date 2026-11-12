@@ -23,6 +23,23 @@ export class HttpError extends Error {
   }
 }
 
+/** Turns an error from the money SQL functions into an answer a person can act on. */
+export function moneyError(e: { code?: string; message?: string }, isPro = false): Error {
+  const m = e.message ?? "";
+  if (m.includes("too_many_running")) {
+    return new HttpError(409, isPro ? "You're running five already." : "You already have a race running. Steppie Pro lets you run up to five at once.");
+  }
+  if (m.includes("purse_full")) return new HttpError(409, "This purse is full.");
+  if (m.includes("no_purse")) return new HttpError(404, "That purse isn't open.");
+  if (e.code === "23505" || m.includes("races_one_entry_per_purse")) return new HttpError(409, "You're already in this purse.");
+  if (m.includes("no_shields")) return new HttpError(400, "Not enough Shields in your locker.");
+  if (e.code === "23514" || m.includes("_cents_check")) return new HttpError(409, "Your balance changed. Try again.");
+  if (m.includes("too_many_hosted")) return new HttpError(409, "You can host three purses at a time.");
+  if (m.includes("free_month_used")) return new HttpError(409, "You've used this month's free Pro purse.");
+  if (m.includes("no_profile")) return new HttpError(403, "Finish setting up your profile first.");
+  return new Error(`money function failed: ${e.code ?? ""} ${m}`);
+}
+
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -113,6 +130,12 @@ export const CASHOUT_MIN = 500;      // a 5 stake that comes back can always be 
 export const CASHOUT_DAILY = 50000;
 export const INVITE_CREDIT = 500;
 export const INVITE_BONUS = 500;
+/** Races (solo stakes and purse entries) one person can have running at once. */
+export function maxRunning(isPro: boolean): number {
+  return isPro ? 5 : 1;
+}
+/** A card checkout left unpaid this long is called off and its balances go back. */
+export const CHECKOUT_TTL_MS = 60 * 60_000;
 
 export function serviceFee(entryCents: number, isPro: boolean, funding: Funding): number {
   const f = (isPro ? PRO_FEES : FEES)[funding];
