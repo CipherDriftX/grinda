@@ -38,13 +38,19 @@ export async function whop<T>(method: "GET" | "POST" | "PATCH", path: string, bo
   return (text ? JSON.parse(text) : {}) as T;
 }
 
-/** Whop amounts are decimals in the currency ("10.00"); Steppie counts cents. */
+/** Whop takes amounts as decimals in the currency (10.00); Steppie counts cents. */
 export function toAmount(cents: number): number {
   return Math.round(cents) / 100;
 }
 
-export function toCents(amount: number | string | null | undefined): number {
-  return Math.round(Number(amount ?? 0) * 100);
+/**
+ * Whop answers with Money objects ({ amount: "10.00", currency, decimals }) in
+ * the pinned API version; older shapes were plain numbers or strings. All three read.
+ */
+export type Money = { amount: string; currency: string; decimals?: number };
+export function toCents(amount: Money | number | string | null | undefined): number {
+  const v = amount !== null && typeof amount === "object" ? amount.amount : amount;
+  return Math.round(Number(v ?? 0) * 100);
 }
 
 /** Metadata values must be strings; drop empty ones. */
@@ -112,8 +118,18 @@ export function refundPayment(paymentId: string, cents?: number, meta: Record<st
 export type Transfer = {
   id: string;
   status: "processing" | "succeeded" | "failed";
+  failure_code?: string | null;
   failure_reason?: string | null;
   tracking_url?: string;
+  metadata?: Record<string, string>;
+};
+
+export type ClaimLink = {
+  id: string; // airdrp_...
+  claim_url: string;
+  claimable: boolean;
+  redeemed_count: number;
+  expires_at: string | null;
 };
 
 /**
@@ -133,6 +149,36 @@ export function transferToUser(o: { whopUserId: string; cents: number; currency:
     notes: o.note.slice(0, 100),
     metadata: o.meta,
   });
+}
+
+export function getTransfer(id: string) {
+  return whop<Transfer>("GET", `/transfers/${id}`);
+}
+
+/**
+ * A link the person opens to claim money into their Whop account, for people
+ * who never paid through Whop (so we have no user id to send to). No
+ * idempotence key exists for these; an orphan link from a lost answer expires
+ * unclaimed and its money stays with Steppie.
+ */
+export function createClaimLink(cents: number, expiresAt: Date) {
+  const accountId = Deno.env.get("WHOP_ACCOUNT_ID");
+  if (!accountId) throw new Error("WHOP_ACCOUNT_ID is not set");
+  return whop<ClaimLink>("POST", "/transfers", {
+    type: "claim_link",
+    amount: toAmount(cents),
+    origin_id: accountId,
+    expires_at: expiresAt.toISOString(),
+    redeemable_count: 1,
+  });
+}
+
+export function getClaimLink(id: string) {
+  return whop<ClaimLink>("GET", `/claim_links/${id}`);
+}
+
+export function getPayment(id: string) {
+  return whop<WhopPayment>("GET", `/payments/${id}`);
 }
 
 // Webhooks ------------------------------------------------------------------------------
@@ -186,15 +232,16 @@ export async function verifyWhopWebhook(raw: string, headers: Headers, secret: s
 }
 
 export type WhopPayment = {
-  id: string;
-  status: string;
+  id: string; // pay_...
+  status: string; // draft | open | authorized | paid | pending | uncollectible | unresolved | void
   substatus?: string;
-  total?: number | string | null;
-  subtotal?: number | string | null;
-  currency?: string;
+  total?: Money | number | string | null; // after discounts, plus any tax added on top
+  subtotal?: Money | number | string | null;
+  currency?: string; // lowercase
   metadata?: Record<string, string> | null;
-  user?: { id: string } | null;
-  refunded_amount?: number | string | null;
+  user?: { id: string } | null; // user_..., null for a company buyer
+  refunded_amount?: Money | number | string | null;
+  refundable?: boolean;
   checkout_configuration_id?: string | null;
 };
 

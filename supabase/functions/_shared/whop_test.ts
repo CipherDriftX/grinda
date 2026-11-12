@@ -1,5 +1,8 @@
 import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1";
-import { checkoutBody, metadata, SignatureError, signStandard, toAmount, toCents, verifyStandard, verifyWhopWebhook, whopBase } from "./whop.ts";
+import {
+  checkoutBody, createClaimLink, getTransfer, metadata, refundPayment, SignatureError, signStandard, toAmount, toCents, transferToUser,
+  verifyStandard, verifyWhopWebhook, WhopError, whopBase,
+} from "./whop.ts";
 
 function decode(b64: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -67,6 +70,7 @@ Deno.test("money converts between cents and Whop decimals without drift", () => 
   assertEquals(toCents("21.99"), 2199);
   assertEquals(toCents(0.29), 29);
   assertEquals(toCents(null), 0);
+  assertEquals(toCents({ amount: "21.99", currency: "usd", decimals: 2 }), 2199);
   assertEquals(metadata({ a: 1, b: "", c: undefined }), { a: "1" });
 });
 
@@ -74,4 +78,50 @@ Deno.test("sandbox unless production is named", () => {
   assertEquals(whopBase(undefined), "https://sandbox-api.whop.com/api/v1");
   assertEquals(whopBase("prod"), "https://sandbox-api.whop.com/api/v1");
   assertEquals(whopBase("production"), "https://api.whop.com/api/v1");
+});
+
+Deno.test("API calls: bearer key, pinned version, sandbox base, exact bodies", async () => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const realFetch = globalThis.fetch;
+  Deno.env.set("WHOP_API_KEY", "key_test");
+  Deno.env.set("WHOP_ACCOUNT_ID", "biz_test");
+  Deno.env.delete("WHOP_ENVIRONMENT");
+  globalThis.fetch = ((url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    return Promise.resolve(new Response(JSON.stringify({ id: "x_1", status: "processing", claim_url: "https://whop.com/c/1" }), { status: 200 }));
+  }) as typeof fetch;
+  try {
+    await transferToUser({ whopUserId: "user_9", cents: 2150, currency: "USD", key: "co-1", note: "Steppie cash-out", meta: { cashout_id: "co-1" } });
+    await createClaimLink(500, new Date("2026-11-19T00:00:00Z"));
+    await refundPayment("pay_7", 1000, { reason: "won" });
+    await refundPayment("pay_8");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  const h = calls[0].init.headers as Record<string, string>;
+  assertEquals(h.Authorization, "Bearer key_test");
+  assertEquals(h["Api-Version-Date"], "2026-11-10-1");
+  assertEquals(calls[0].url, "https://sandbox-api.whop.com/api/v1/transfers");
+  assertEquals(JSON.parse(calls[0].init.body as string), {
+    type: "balance", amount: 21.5, currency: "usd", origin_id: "biz_test", destination_id: "user_9",
+    idempotence_key: "co-1", notes: "Steppie cash-out", metadata: { cashout_id: "co-1" },
+  });
+  assertEquals(JSON.parse(calls[1].init.body as string), {
+    type: "claim_link", amount: 5, origin_id: "biz_test", expires_at: "2026-11-19T00:00:00.000Z", redeemable_count: 1,
+  });
+  assertEquals(calls[2].url, "https://sandbox-api.whop.com/api/v1/payments/pay_7/refund");
+  assertEquals(JSON.parse(calls[2].init.body as string), { partial_amount: 10, metadata: { reason: "won" } });
+  assertEquals(JSON.parse(calls[3].init.body as string), { metadata: {} });
+});
+
+Deno.test("a Whop error keeps its status and body", async () => {
+  const realFetch = globalThis.fetch;
+  Deno.env.set("WHOP_API_KEY", "key_test");
+  globalThis.fetch = (() => Promise.resolve(new Response('{"error":"insufficient balance"}', { status: 422 }))) as typeof fetch;
+  try {
+    const e = await assertRejects(() => getTransfer("tr_1"), WhopError);
+    assertEquals([e.status, e.body], [422, '{"error":"insufficient balance"}']);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
