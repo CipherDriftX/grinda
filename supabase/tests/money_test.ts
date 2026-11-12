@@ -248,3 +248,88 @@ Deno.test("cash-out: leaves the Vault with its ledger line; a failure puts it ba
   await assertRejects(() => req(500), Error, "payouts_frozen");
   await db.close();
 });
+
+async function fourEntrants(db: PGlite) {
+  await purse(db);
+  const ids: string[] = [];
+  const users: string[] = [];
+  for (const name of ["Ava Stone", "Ben Ray", "Cy Moss", "Di Lane"]) {
+    const u = await user(db, name);
+    await fund(db, u, 2130, 0);
+    users.push(u);
+    ids.push(await open(db, u, entry()));
+  }
+  return { ids, users };
+}
+
+async function payouts(db: PGlite, ids: string[]) {
+  const r = await db.query<{ payout_cents: number | null }>("select payout_cents from races where id = any($1) order by array_position($1, id)", [ids]);
+  return r.rows.map((x) => x.payout_cents);
+}
+
+Deno.test("split: an entry under review holds only its own share; a finish gets it later", async () => {
+  const db = await freshDb();
+  const { ids, users } = await fourEntrants(db);
+  await one(db, "select settle_race($1, true, 0)", [ids[0]]);
+  await one(db, "select settle_race($1, true, 0)", [ids[1]]);
+  await db.query("update race_days set disputed = true where race_id = $1 and day = '2026-11-17'", [ids[2]]);
+  await db.query("update races set status = 'underReview' where id = $1", [ids[2]]);
+  await one(db, "select settle_race($1, false, 0)", [ids[3]]);
+
+  const s = await one<{ s: { state: string; under_review: number } }>(db, "select split_purse($1) as s", [PURSE]);
+  assertEquals([s.s.state, s.s.under_review], ["split", 1]);
+  assertEquals(await payouts(db, ids), [2667, 2667, null, 0]);         // 8000 / 3 = 2666 r 2
+  assertEquals((await one<{ r: number }>(db, "select reserve_cents as r from purses where id = $1", [PURSE])).r, 2666);
+
+  assertEquals((await one<{ s: string }>(db, "select resolve_day($1, '2026-11-17', 'accept') as s", [ids[2]])).s, "back to settle");
+  await one(db, "select settle_race($1, true, 0)", [ids[2]]);
+  assertEquals((await one<{ s: string }>(db, "select pay_reviewed_entry($1) as s", [ids[2]])).s, "paid");
+  assertEquals((await one<{ s: string }>(db, "select pay_reviewed_entry($1) as s", [ids[2]])).s, "already");
+  assertEquals(await payouts(db, ids), [2667, 2667, 2666, 0]);
+  const total = await one<{ t: number }>(db, "select sum(vault_cents)::int as t from profiles where id = any($1)", [users]);
+  assertEquals(total.t, 8000);                                          // every cent of the purse paid out
+  await db.close();
+});
+
+Deno.test("split: a rejected review shares its held money among the finishers", async () => {
+  const db = await freshDb();
+  const { ids, users } = await fourEntrants(db);
+  await one(db, "select settle_race($1, true, 0)", [ids[0]]);
+  await one(db, "select settle_race($1, true, 0)", [ids[1]]);
+  await db.query("update race_days set flagged = true where race_id = $1 and day = '2026-11-16'", [ids[2]]);
+  await db.query("update races set status = 'underReview' where id = $1", [ids[2]]);
+  await one(db, "select settle_race($1, false, 0)", [ids[3]]);
+  await one(db, "select split_purse($1)", [PURSE]);
+
+  await one(db, "select resolve_day($1, '2026-11-16', 'reject', 'step pattern from a phone shaker')", [ids[2]]);
+  assertEquals((await one<{ b: boolean }>(db, "select benched as b from races where id = $1", [ids[2]])).b, true);
+  await one(db, "select settle_race($1, true, 0)", [ids[2]]);
+  assertEquals((await one<{ s: string }>(db, "select pay_reviewed_entry($1) as s", [ids[2]])).s, "shared");
+  assertEquals(await payouts(db, ids), [4000, 4000, 0, 0]);             // 2667 + 1333, 2667 + 1333
+  const total = await one<{ t: number }>(db, "select sum(vault_cents)::int as t from profiles where id = any($1)", [users]);
+  assertEquals(total.t, 8000);
+  assertEquals((await one<{ r: number }>(db, "select reserve_cents as r from purses where id = $1", [PURSE])).r, 0);
+  await db.close();
+});
+
+Deno.test("split: nobody finished, entries go back where they came from", async () => {
+  const db = await freshDb();
+  await purse(db);
+  const a = await user(db, "Ava Stone");
+  await fund(db, a, 1630, 500);
+  const id = await open(db, a, entry({ from_credit: 500, from_vault: 1630 }));
+  await one(db, "select settle_race($1, false, 0)", [id]);
+  assertEquals((await one<{ s: { state: string } }>(db, "select split_purse($1) as s", [PURSE])).s.state, "split");
+  assertEquals(await balances(db, a), [1500, 500, 1]);                 // entry back: 500 credit, 1500 Vault; the fee stays
+  assertEquals(await ledger(db, a), ["entry:2000", "fee:130", "refunded:2000"]);
+  await db.close();
+});
+
+Deno.test("split waits while the only possible finishers are under review", async () => {
+  const db = await freshDb();
+  const { ids } = await fourEntrants(db);
+  for (const id of ids.slice(1)) await one(db, "select settle_race($1, false, 0)", [id]);
+  await db.query("update races set status = 'underReview' where id = $1", [ids[0]]);
+  assertEquals((await one<{ s: { state: string } }>(db, "select split_purse($1) as s", [PURSE])).s.state, "waiting_review");
+  await db.close();
+});

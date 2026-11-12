@@ -24,11 +24,16 @@ create schema vault;
 create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
 `;
 
-export async function freshDb(): Promise<PGlite> {
+export function freshDb(): Promise<PGlite> {
+  return freshDbUpTo("~");
+}
+
+/** A database with every migration whose name sorts before `stop` applied. */
+export async function freshDbUpTo(stop: string): Promise<PGlite> {
   const db = new PGlite();
   await db.exec(STUBS);
   const dir = new URL("../migrations/", import.meta.url);
-  const files = [...Deno.readDirSync(dir)].map((f) => f.name).filter((n) => n.endsWith(".sql")).sort();
+  const files = [...Deno.readDirSync(dir)].map((f) => f.name).filter((n) => n.endsWith(".sql") && n < stop).sort();
   for (const name of files) {
     const sql = Deno.readTextFileSync(new URL(name, dir))
       .replace(/^\s*create extension[^;]*;/gim, "-- (extension provided by the harness)");
