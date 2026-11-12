@@ -1,14 +1,28 @@
-// Age and place checks before any money goes in. Rules come from settings so
-// a lawyer's list can change them without a release:
+// Age and place checks before any money goes in. The lists below are the
+// defaults; a lawyer's list replaces them through settings, without a release:
 //   BLOCKED_REGIONS  comma list of ISO codes: whole countries (CZ) or states (US-AZ).
-//                    "none" means nothing is blocked. Unset in production is an
-//                    error, so a missing setting can never open every state.
+//                    "none" blocks nothing. Unset or empty uses DEFAULT_BLOCKED.
 //   AGE_RULES        comma list of code:age where the minimum is above 18
-//                    (e.g. US-AL:19,US-MS:21).
+//                    (e.g. US-AL:19,US-MS:21). "none" clears it. Unset or empty
+//                    uses DEFAULT_AGES.
 // Cash-outs never call this: money already in the Vault always goes home.
 import { HttpError } from "./common.ts";
 
 export const DEFAULT_MIN_AGE = 18;
+
+// Steppa (the same pay-to-enter, finishers-split model) blocks paid play in
+// some US states but doesn't publish which. This is the list Skillz-powered
+// cash-tournament apps publish on the App Store (Solitaire Tour, Jewel Blitz,
+// checked 2026-11-12): states whose laws catch paid contests with any element
+// of chance. Steppa's Terms add nothing country-wide.
+export const DEFAULT_BLOCKED = "US-AZ,US-AR,US-CT,US-DE,US-LA,US-MT,US-SC,US-SD,US-TN";
+
+// Steppa's Terms: 18, "or 19 or 21 where a higher minimum age is required by the
+// law of Your jurisdiction of residence". That is the age of majority: 19 in
+// Alabama, Nebraska and seven Canadian provinces and territories, 21 in
+// Mississippi and Puerto Rico.
+export const DEFAULT_AGES =
+  "US-AL:19,US-NE:19,US-MS:21,PR:21,CA-BC:19,CA-NB:19,CA-NL:19,CA-NS:19,CA-NT:19,CA-NU:19,CA-YT:19";
 // Countries whose rules differ by state: a state is required before money.
 export const NEEDS_REGION = new Set(["US", "CA", "AU"]);
 
@@ -30,15 +44,15 @@ export function normRegion(country: string | null, r: unknown): string | null {
 }
 
 export function readRules(env: (k: string) => string | undefined = (k) => Deno.env.get(k)): Rules {
-  const raw = env("BLOCKED_REGIONS");
-  if (raw === undefined && env("WHOP_ENVIRONMENT") === "production") {
-    throw new HttpError(503, "Paid races are paused while we set up region rules.");
-  }
+  const setting = (k: string, fallback: string) => {
+    const v = (env(k) ?? "").trim();
+    return v === "" ? fallback : v.toUpperCase() === "NONE" ? "" : v;
+  };
   const blocked = new Set(
-    (raw ?? "").split(",").map((s) => s.trim().toUpperCase()).filter((s) => s && s !== "NONE"),
+    setting("BLOCKED_REGIONS", DEFAULT_BLOCKED).split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
   );
   const ages = new Map<string, number>();
-  for (const part of (env("AGE_RULES") ?? "").split(",")) {
+  for (const part of setting("AGE_RULES", DEFAULT_AGES).split(",")) {
     const [code, age] = part.split(":").map((s) => s.trim().toUpperCase());
     const n = Number(age);
     if (code && Number.isInteger(n) && n >= DEFAULT_MIN_AGE && n <= 25) ages.set(code, n);

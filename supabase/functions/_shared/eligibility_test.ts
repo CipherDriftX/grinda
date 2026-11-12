@@ -4,15 +4,34 @@ import { HttpError } from "./common.ts";
 
 const env = (m: Record<string, string>) => (k: string) => m[k];
 
-Deno.test("rules: unset in production stops money, 'none' blocks nothing", () => {
-  assertThrows(() => readRules(env({ WHOP_ENVIRONMENT: "production" })), HttpError);
-  assertEquals(readRules(env({ WHOP_ENVIRONMENT: "production", BLOCKED_REGIONS: "none" })).blocked.size, 0);
-  assertEquals(readRules(env({ WHOP_ENVIRONMENT: "sandbox" })).blocked.size, 0);
+Deno.test("rules: unset or empty uses the defaults, 'none' clears, a list replaces", () => {
+  for (const d of [readRules(env({})), readRules(env({ BLOCKED_REGIONS: " ", AGE_RULES: "" }))]) {
+    assertEquals(d.blocked.size, 9);
+    assertEquals(d.blocked.has("US-AZ") && d.blocked.has("US-TN"), true);
+    assertEquals(d.blocked.has("US-TX"), false);
+    assertEquals(d.ages.get("US-MS"), 21);
+    assertEquals(d.ages.get("US-AL"), 19);
+    assertEquals(d.ages.get("CA-BC"), 19);
+    assertEquals(d.ages.has("CA-ON"), false);
+  }
+  const none = readRules(env({ BLOCKED_REGIONS: "none", AGE_RULES: "NONE" }));
+  assertEquals(none.blocked.size + none.ages.size, 0);
   const r = readRules(env({ BLOCKED_REGIONS: " us-az, CZ ,", AGE_RULES: "US-AL:19,US-MS:21,XX:abc,US-NE:12" }));
   assertEquals([...r.blocked].sort(), ["CZ", "US-AZ"]);
   assertEquals(r.ages.get("US-MS"), 21);
   assertEquals(r.ages.has("XX"), false);
   assertEquals(r.ages.has("US-NE"), false); // below 18 is ignored
+});
+
+Deno.test("default rules: Arizona blocked, Texas open, 20 is too young in Mississippi", () => {
+  const d = readRules(env({}));
+  const tx = { id: "u", birth_year: 2006, birth_date: "2006-01-01", country: "US", region: "US-TX" };
+  checkEligible(tx, "2026-11-12", d);
+  assertThrows(() => checkEligible({ ...tx, region: "US-AZ" }, "2026-11-12", d), HttpError, "aren't available");
+  assertThrows(() => checkEligible({ ...tx, region: "US-MS" }, "2026-11-12", d), HttpError, "21 and over");
+  assertThrows(() => checkEligible({ ...tx, country: "CA", region: "CA-BC", birth_date: "2008-01-01" }, "2026-11-12", d), HttpError, "19 and over");
+  checkEligible({ ...tx, country: "CA", region: "CA-ON", birth_date: "2008-01-01" }, "2026-11-12", d);
+  checkEligible({ ...tx, country: "DE", region: null }, "2026-11-12", d);
 });
 
 Deno.test("blocked by country or by state", () => {

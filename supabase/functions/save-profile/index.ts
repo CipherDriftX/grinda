@@ -5,7 +5,7 @@
 // Asking for place here, before any money, means nobody learns their state is
 // blocked after they paid for Pro or an entry.
 import { admin, handler, HttpError, json, requireUser } from "../_shared/common.ts";
-import { type Declared, fillFromBody, isBlocked, readRules } from "../_shared/eligibility.ts";
+import { ageOn, type Declared, fillFromBody, isBlocked, minAge, readRules } from "../_shared/eligibility.ts";
 
 type Body = Declared & { display_name?: string | null };
 
@@ -33,12 +33,11 @@ Deno.serve(handler(async (req) => {
     saved = data;
   }
 
-  let paidRaces = true;
-  try {
-    paidRaces = !isBlocked({ country: saved.country, region: saved.region }, readRules());
-  } catch {
-    paidRaces = false; // rules not set up yet in production
-  }
+  // Said now, before Pro or any entry is bought: blocked place, or under the age there.
+  const place = { country: saved.country, region: saved.region };
+  const rules = readRules();
+  const age = ageOn(new Date().toISOString().slice(0, 10), saved.birth_date, saved.birth_year);
+  const paidRaces = !isBlocked(place, rules) && (age === null || age >= minAge(place, rules));
   return json({
     display_name: saved.display_name,
     invite_code: saved.invite_code,
