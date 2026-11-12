@@ -51,3 +51,12 @@ Deno.test("no stored function or view still names a Stripe column", async () => 
   assertEquals([fns.rows, views.rows], [[], []]);
   await db.close();
 });
+
+Deno.test("only one settle run holds the lock at a time", async () => {
+  const db = await freshDb();
+  const claim = async () => (await one<{ ok: boolean }>(db, "select claim_settle(300) as ok")).ok;
+  assertEquals([await claim(), await claim()], [true, false]);
+  await db.query("select release_settle()");
+  assertEquals(await claim(), true);
+  await db.close();
+});
