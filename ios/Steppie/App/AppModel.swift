@@ -954,10 +954,32 @@ final class AppModel {
         }
     }
 
-    func deleteAccount() async {
-        try? await api.deleteAccount()
+    enum DeleteResult {
+        /// Gone on the server. `claimURL` is set when the Vault went out as a Whop claim link.
+        case deleted(claimURL: URL?)
+        /// Money in the Vault: cash it out or give it up first.
+        case vaultChoice(Money)
+        /// A race still running, a cash-out on its way, or no way to pay the Vault out.
+        case blocked(String)
+    }
+
+    /// Deletes the account on the server. Money decides the order: a running
+    /// race or a cash-out on its way blocks it, and Vault money needs a choice.
+    /// Call `wipeLocal()` once the person has seen the result.
+    func deleteAccount(vault: String? = nil) async -> DeleteResult {
+        guard !isDemo, api.isConfigured, api.session != nil else { return .deleted(claimURL: nil) }
+        do {
+            return .deleted(claimURL: try await api.deleteAccount(vault: vault))
+        } catch APIClient.APIError.refused(code: "vault_not_empty", message: _, vaultCents: let cents) {
+            return .vaultChoice(Money(cents: cents ?? profile.vaultCents, currency: currency))
+        } catch {
+            return .blocked(error.localizedDescription)
+        }
+    }
+
+    func wipeLocal() {
         profileStore.delete(); racesStore.delete(); ledgerStore.delete()
-        profile = Profile(); races = []; ledger = []
+        profile = Profile(); races = []; ledger = []; isPro = false
     }
 
     func persist() {

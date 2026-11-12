@@ -435,11 +435,15 @@ final class APIClient {
         try await get("functions/v1/public-stats?currency=\(Money.localCurrency)", auth: false)
     }
 
-    func deleteAccount() async throws {
-        struct Ok: Decodable { let ok: Bool }
-        struct Empty: Encodable {}
-        let _: Ok = try await send("functions/v1/delete-account", body: Empty())
+    /// `vault`: "cash_out" or "give_up" when the Vault isn't empty. Returns the
+    /// claim link when the Vault went out as one (the only way to it afterwards).
+    func deleteAccount(vault: String?) async throws -> URL? {
+        struct Body: Encodable { let vault: String? }
+        struct Payout: Decodable { let claimUrl: String? }
+        struct Reply: Decodable { let ok: Bool; let payout: Payout? }
+        let r: Reply = try await send("functions/v1/delete-account", body: Body(vault: vault))
         session = nil
+        return r.payout?.claimUrl.flatMap { URL(string: $0) }
     }
 
     // MARK: Transport

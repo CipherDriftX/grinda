@@ -4,7 +4,12 @@ import UIKit
 struct ProfileView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var confirmDelete = false
+    @State private var deleting = false
+    @State private var vaultChoice: Money?
+    @State private var deleteError: String?
+    @State private var claimURL: URL?
 
     var body: some View {
         @Bindable var model = model
@@ -78,19 +83,62 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    Button("Delete account", role: .destructive) { confirmDelete = true }
+                    if deleting {
+                        ProgressView()
+                    } else {
+                        Button("Delete account", role: .destructive) { confirmDelete = true }
+                    }
                 } footer: {
-                    Text("Deletes your account and data. Holds are released; charged stakes on live races are refunded.")
+                    Text("Deletes your account and data. Races still running have to settle first. Money in your Vault is cashed out through Whop or given up; entry credit ends with the account. Payment records stay in our books without your name.")
                 }
             }
             .navigationTitle("You")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { model.persist(); dismiss() } } }
             .confirmationDialog("Delete your Steppie account?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete account", role: .destructive) { Task { await model.deleteAccount(); dismiss() } }
+                Button("Delete account", role: .destructive) { Task { await delete(vault: nil) } }
             } message: {
                 Text("This can't be undone.")
             }
+            .confirmationDialog("Your Vault holds \(vaultChoice?.formatted ?? "money")", isPresented: Binding(get: { vaultChoice != nil }, set: { if !$0 { vaultChoice = nil } }), titleVisibility: .visible) {
+                Button("Cash it out, then delete") { vaultChoice = nil; Task { await delete(vault: "cash_out") } }
+                Button("Give it up and delete", role: .destructive) { vaultChoice = nil; Task { await delete(vault: "give_up") } }
+                Button("Cancel", role: .cancel) { vaultChoice = nil }
+            } message: {
+                Text("Cashing out sends it through Whop before the account goes. Given up, it stays with Steppie.")
+            }
+            .alert("Can't delete yet", isPresented: .constant(deleteError != nil)) {
+                Button("OK") { deleteError = nil }
+            } message: { Text(deleteError ?? "") }
+            .alert("Claim your Vault", isPresented: .constant(claimURL != nil)) {
+                Button("Open claim link") {
+                    if let claimURL { openURL(claimURL) }
+                    claimURL = nil
+                    model.wipeLocal()
+                }
+            } message: {
+                Text("Your account is deleted. Your Vault went out as a Whop claim link, and this is the only time you'll see it. Open it now to claim the money.")
+            }
+        }
+    }
+}
+
+extension ProfileView {
+    private func delete(vault: String?) async {
+        deleting = true
+        defer { deleting = false }
+        switch await model.deleteAccount(vault: vault) {
+        case .deleted(let url):
+            if let url {
+                claimURL = url
+            } else {
+                model.wipeLocal()
+                dismiss()
+            }
+        case .vaultChoice(let money):
+            vaultChoice = money
+        case .blocked(let message):
+            deleteError = message
         }
     }
 }
