@@ -333,3 +333,32 @@ Deno.test("split waits while the only possible finishers are under review", asyn
   assertEquals((await one<{ s: { state: string } }>(db, "select split_purse($1) as s", [PURSE])).s.state, "waiting_review");
   await db.close();
 });
+
+Deno.test("invite: credit in the person's currency once; the inviter's cash needs the friend's own money", async () => {
+  const db = await freshDb();
+  const inviter = await user(db, "Ava Stone");
+  const friend = await user(db, "Ben Ray");
+  const code = (await one<{ c: string }>(db, "select invite_code as c from profiles where id = $1", [inviter])).c;
+  const redeem = () => one(db, "select redeem_invite($1, $2, 500, 'USD')", [friend, code]);
+  await redeem();
+  await assertRejects(redeem, Error, "already_used");
+  await assertRejects(() => one(db, "select redeem_invite($1, $2, 500, 'USD')", [inviter, code]), Error, "own_code");
+  assertEquals(await balances(db, friend), [0, 500, 1]);
+  assertEquals((await one<{ c: string }>(db, "select currency as c from profiles where id = $1", [friend])).c, "USD");
+
+  // Free credit plus a small card top-up on a 5 purse: no cash bonus for the inviter.
+  await db.query(`insert into purses (id, name, kind, daily_goal, days, entry_cents, currency, starts_on)
+    values ('fresh-paws-test-usd', 'Fresh Paws', 'house', 5000, 3, 500, 'USD', '2026-11-16')`);
+  const first = await open(db, friend, entry({
+    purse_id: "fresh-paws-test-usd", template_id: "purse:fresh-paws-test-usd", daily_goal: 5000,
+    stake_cents: 500, fee_cents: 124, from_credit: 500, from_vault: 0, from_card: 124,
+  }));
+  await one(db, "select confirm_payment($1, 'pay_f1', 124, 'usd', null, 500)", [first]);
+  assertEquals((await balances(db, inviter))[0], 0);
+  // A later entry with 5+ of their own money pays it.
+  await purse(db);
+  await fund(db, friend, 2130, 0);
+  await open(db, friend, entry(), 5);
+  assertEquals((await balances(db, inviter))[0], 500);
+  await db.close();
+});
