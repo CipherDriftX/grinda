@@ -1,9 +1,13 @@
-// Moves Vault money out: bank or PayPal, from $25, up to $500 a day. The
-// balance is taken now; the payout itself is sent by the payouts run (and
-// marked paid), so a failed transfer goes back to the Vault.
+// Moves Vault money out through Whop, from 5 up to 500 a day. The Vault is
+// debited first, in one transaction with the cash-out row and ledger line.
+// People who have paid through Whop get a balance transfer to their Whop
+// account; everyone else gets a claim link (USD only, since a claim link
+// can't name a currency). If Whop is down or short, settle retries for about
+// a day, then the money goes back to the Vault.
 import { admin, CASHOUT_DAILY, CASHOUT_MIN, handler, HttpError, json, requireUser } from "../_shared/common.ts";
+import { type Cashout, sendCashout } from "../_shared/payout.ts";
 
-type Body = { amount_cents: number; method: "bank" | "paypal" };
+type Body = { amount_cents: number };
 
 Deno.serve(handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -13,34 +17,34 @@ Deno.serve(handler(async (req) => {
 
   const amount = Math.floor(body.amount_cents);
   if (!Number.isInteger(amount) || amount < CASHOUT_MIN) throw new HttpError(400, "You can cash out from 5.");
-  if (!["bank", "paypal"].includes(body.method)) throw new HttpError(400, "Pick bank or PayPal.");
 
-  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
-  const { data: recent } = await db.from("cashouts").select("amount_cents").eq("user_id", user.id)
-    .neq("status", "failed").gte("created_at", since);
-  const today = (recent ?? []).reduce((a, r) => a + (r.amount_cents as number), 0);
-  if (today + amount > CASHOUT_DAILY) throw new HttpError(409, "Cash-outs are limited to 500 a day.");
+  const { data: profile } = await db.from("profiles").select("currency, whop_user_id, payouts_frozen_at").eq("id", user.id).maybeSingle();
+  if (!profile) throw new HttpError(403, "Finish setting up your profile first.");
+  if (profile.payouts_frozen_at) {
+    throw new HttpError(409, "Cash-outs are paused on your account while we look at a card dispute. Write to support and we'll sort it out.");
+  }
+  const method = profile.whop_user_id ? "whop" : "claim_link";
+  if (method === "claim_link" && (profile.currency ?? "USD") !== "USD") {
+    throw new HttpError(409, "Pay one entry by card first, so we know your Whop account. Then cash-outs go straight to it.");
+  }
 
-  const { data: profile } = await db.from("profiles").select("vault_cents").eq("id", user.id).maybeSingle();
-  if ((profile?.vault_cents ?? 0) < amount) throw new HttpError(409, "That's more than your Vault holds.");
+  const { data: id, error } = await db.rpc("request_cashout", { uid: user.id, cents: amount, daily: CASHOUT_DAILY, how: method });
+  if (error) {
+    const m = error.message ?? "";
+    if (m.includes("over_daily")) throw new HttpError(409, "Cash-outs are limited to 500 a day.");
+    if (m.includes("payouts_frozen")) throw new HttpError(409, "Cash-outs are paused on your account. Write to support.");
+    if (error.code === "23514" || m.includes("vault_cents")) throw new HttpError(409, "That's more than your Vault holds.");
+    throw error;
+  }
 
-  const { error } = await db.rpc("adjust_balance", { uid: user.id, vault_delta: -amount, credit_delta: 0 });
-  if (error) throw new HttpError(409, "Your balance changed. Try again.");
-
-  const { data: row } = await db.from("cashouts").insert({
-    user_id: user.id, amount_cents: amount, currency: await currencyFor(db, user.id), method: body.method,
-  }).select().single();
-  await db.from("ledger_entries").insert({
-    race_id: null, user_id: user.id, kind: "cashout", amount_cents: amount, currency: row?.currency ?? "USD",
-    stripe_ref: `co_${row?.id}`, label: body.method === "bank" ? "Bank account" : "PayPal",
+  const { data: row } = await db.from("cashouts").select("*").eq("id", id).single();
+  const c = await sendCashout(db, row as Cashout, profile.whop_user_id);
+  return json({
+    cashout: {
+      id: c.id, amount_cents: c.amount_cents, currency: c.currency, method: c.method, status: c.status,
+      claim_url: c.claim_url, claim_expires_at: c.claim_expires_at, tracking_url: c.tracking_url,
+      // Whop didn't answer yet: the Vault is already debited and we keep trying.
+      delayed: c.status === "requested",
+    },
   });
-
-  return json({ ok: true });
 }));
-
-// deno-lint-ignore no-explicit-any
-async function currencyFor(db: any, userId: string): Promise<string> {
-  const { data } = await db.from("races").select("currency").eq("user_id", userId).not("currency", "is", null)
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  return data?.currency ?? "USD";
-}

@@ -226,3 +226,25 @@ Deno.test("purse entries only get their result from settle_race; Shields come ba
   assertEquals(await balances(db, uid), [0, 0, 1]);
   await db.close();
 });
+
+Deno.test("cash-out: leaves the Vault with its ledger line; a failure puts it back once", async () => {
+  const db = await freshDb();
+  const uid = await user(db);
+  await fund(db, uid, 3000, 0);
+  const req = (cents: number) => one<{ id: string }>(db, "select request_cashout($1, $2, 5000, 'whop') as id", [uid, cents]);
+  const a = (await req(2000)).id;
+  assertEquals((await balances(db, uid))[0], 1000);
+  await assertRejects(() => req(1500), Error, "vault_cents");             // more than the Vault
+  await fund(db, uid, 9000, 0);
+  await assertRejects(() => req(3500), Error, "over_daily");              // 2000 + 3500 > 5000 in 24 h
+  assertEquals((await one<{ ok: boolean }>(db, "select cashout_failed($1, 'no balance') as ok", [a])).ok, true);
+  assertEquals((await one<{ ok: boolean }>(db, "select cashout_failed($1, 'no balance') as ok", [a])).ok, false);
+  assertEquals((await balances(db, uid))[0], 11000);
+  const b = (await req(5000)).id;                                         // the failed one no longer counts
+  assertEquals((await one<{ ok: boolean }>(db, "select cashout_paid($1) as ok", [b])).ok, true);
+  assertEquals((await one<{ ok: boolean }>(db, "select cashout_failed($1, 'late') as ok", [b])).ok, false);  // paid stays paid
+  assertEquals(await ledger(db, uid), ["cashout:2000", "cashout:5000", "refunded:2000"]);
+  await db.query("update profiles set payouts_frozen_at = now() where id = $1", [uid]);
+  await assertRejects(() => req(500), Error, "payouts_frozen");
+  await db.close();
+});
