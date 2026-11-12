@@ -295,6 +295,15 @@ struct Profile: Codable, Hashable {
     var appleUserID: String?
     var displayName: String?
     var birthYear: Int?
+    /// yyyy-MM-dd, Gregorian. Saved on the server once; it decides the age check.
+    var birthDate: String?
+    /// ISO 3166 country ("DE") and, in the US, Canada and Australia, region ("US-AZ").
+    var country: String?
+    var region: String?
+    /// The currency the server keeps this person's money in (set on the first money move).
+    var currency: String?
+    /// False when paid races are blocked where this person lives (the server decides).
+    var paidRacesAvailable = true
     var notificationsEnabled = false
     /// Opted in to race invites (fresh starts, comebacks, new races) on top of pace nudges.
     var invitesEnabled = false
@@ -316,21 +325,43 @@ struct Profile: Codable, Hashable {
     /// Your invite code, and the code you joined with.
     var inviteCode: String?
     var invitedBy: String?
+    /// A code typed before sign-in, sent to the server right after it.
+    var pendingInvite: String?
     /// Invites that turned into a first paid entry.
     var invitesPaid = 0
 
     var isSignedIn: Bool { appleUserID != nil }
-    var isAdult: Bool {
-        guard let y = birthYear else { return false }
-        return Calendar.current.component(.year, from: .now) - y >= 18
+    var isAdult: Bool { (age ?? 0) >= 18 }
+
+    /// Whole years today, counted like the server does: with only a birth
+    /// year, assume the birthday hasn't come yet.
+    var age: Int? {
+        let now = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: .now)
+        guard let ty = now.year, let tm = now.month, let td = now.day else { return nil }
+        if let b = birthDate, b.count == 10,
+           let y = Int(b.prefix(4)), let m = Int(b.dropFirst(5).prefix(2)), let d = Int(b.suffix(2)) {
+            return ty - y - ((tm, td) < (m, d) ? 1 : 0)
+        }
+        if let y = birthYear { return ty - y - 1 }
+        return nil
     }
+
+    /// No country yet, or no state where the rules need one.
+    var needsPlace: Bool {
+        guard let c = country else { return true }
+        return Place.needsRegion.contains(c) && region == nil
+    }
+
+    /// What the server needs before the first money move.
+    var needsDetails: Bool { !isSignedIn || needsPlace || (birthDate == nil && birthYear == nil) }
 }
 
 extension Profile {
     private enum CodingKeys: String, CodingKey {
         case why, weightKg, goalWeightKg, dailyGoal, baseline, usesMetric, onboarded, appleUserID, displayName, birthYear
+        case birthDate, country, region, currency, paidRacesAvailable
         case notificationsEnabled, invitesEnabled, onboardedAt, shields, shoes, wearing, unopenedBoxes, weekGrit, league
-        case vaultCents, creditCents, inviteCode, invitedBy, invitesPaid
+        case vaultCents, creditCents, inviteCode, invitedBy, pendingInvite, invitesPaid
     }
 
     /// Tolerant decoding: fields added in later versions fall back to their
@@ -349,6 +380,11 @@ extension Profile {
         appleUserID = v(.appleUserID, appleUserID)
         displayName = v(.displayName, displayName)
         birthYear = v(.birthYear, birthYear)
+        birthDate = v(.birthDate, birthDate)
+        country = v(.country, country)
+        region = v(.region, region)
+        currency = v(.currency, currency)
+        paidRacesAvailable = v(.paidRacesAvailable, paidRacesAvailable)
         notificationsEnabled = v(.notificationsEnabled, notificationsEnabled)
         invitesEnabled = v(.invitesEnabled, invitesEnabled)
         onboardedAt = v(.onboardedAt, onboardedAt)
@@ -362,6 +398,7 @@ extension Profile {
         creditCents = v(.creditCents, creditCents)
         inviteCode = v(.inviteCode, inviteCode)
         invitedBy = v(.invitedBy, invitedBy)
+        pendingInvite = v(.pendingInvite, pendingInvite)
         invitesPaid = v(.invitesPaid, invitesPaid)
     }
 }

@@ -171,7 +171,7 @@ struct HostPurseSheet: View {
 
     private func create() async {
         naming = false
-        if !model.profile.isSignedIn && !model.isDemo { showGate = true; return }
+        if !model.isDemo, model.profile.needsDetails { showGate = true; return }
         working = true
         defer { working = false }
         do {

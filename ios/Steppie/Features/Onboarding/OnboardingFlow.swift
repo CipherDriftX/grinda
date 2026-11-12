@@ -511,7 +511,7 @@ private struct HowStep: View {
     }
 }
 
-/// A friend's code: $5 of entry credit now, $5 for them later. Skippable.
+/// A friend's code: entry credit once you sign in, a bonus for them later. Skippable.
 private struct CodeStep: View {
     let next: () -> Void
     @Environment(AppModel.self) private var model
@@ -520,10 +520,14 @@ private struct CodeStep: View {
     @State private var done = false
     @State private var shake = 0
 
+    private var bonus: String { Money(cents: Invite.newMemberCreditCents, currency: model.currency).formatted }
+
     var body: some View {
-        StepScaffold(title: done ? "$5 is yours" : "Got a friend's code?",
-                     subtitle: done ? "It's in your Vault as entry credit. Your friend gets $5 when you join your first purse."
-                                    : "Enter it and you both get $5. No code? Skip it, you can add one later in Crew.",
+        StepScaffold(title: done ? "\(bonus) is yours" : "Got a friend's code?",
+                     subtitle: done ? (model.profile.pendingInvite == nil
+                                       ? "It's in your Vault as entry credit. Your friend gets \(bonus) when you join your first purse."
+                                       : "It lands in your Vault as entry credit when you sign in. Your friend gets \(bonus) when you join your first purse.")
+                                    : "Enter it and you both get \(bonus). No code? Skip it, you can add one later in Crew.",
                      cta: done ? "Next" : "Use code", ctaEnabled: done || code.count >= 4,
                      secondary: done ? nil : ("Skip", next), grin: done ? .cheer : nil,
                      action: { done ? next() : redeem() }) {

@@ -37,14 +37,16 @@ struct InviteSheet: View {
                             .foregroundStyle(Palette.ink)
                             .contentTransition(.opacity)
                         Text(redeemed
-                             ? "It's in your Vault as entry credit. Use it on any purse."
+                             ? (model.profile.pendingInvite == nil
+                                ? "It's in your Vault as entry credit. Use it on any purse."
+                                : "It lands in your Vault as entry credit when you sign in.")
                              : "Enter it for \(bonus.formatted) of entry credit. Your friend gets \(bonus.formatted) when you join your first purse.")
                             .font(.body)
                             .foregroundStyle(Palette.inkSecondary)
                             .multilineTextAlignment(.center)
                     }
 
-                    if let used = model.profile.invitedBy, !redeemed {
+                    if let used = model.profile.invitedBy ?? model.profile.pendingInvite, !redeemed {
                         Label("You joined with code \(used)", systemImage: "checkmark.seal.fill")
                             .font(.system(.headline, weight: .semibold))
                             .foregroundStyle(Palette.ink)

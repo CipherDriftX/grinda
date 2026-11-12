@@ -121,6 +121,9 @@ final class APIClient {
         let timezone: String
         let startDate: String // yyyy-MM-dd, local
         let birthYear: Int?
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
         var shieldsEquipped: Int = 0
         var comebackOf: UUID? = nil
     }
@@ -224,6 +227,9 @@ final class APIClient {
         let purseId: String
         let timezone: String
         let birthYear: Int?
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
         var shieldsEquipped: Int = 0
     }
 
@@ -291,10 +297,33 @@ final class APIClient {
         return r.cashout
     }
 
-    func redeemInvite(code: String) async throws {
-        struct Body: Encodable { let code: String }
+    /// The credit is booked in the person's server currency, else `currency`.
+    func redeemInvite(code: String, currency: String) async throws {
+        struct Body: Encodable { let code: String; let currency: String }
         struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/redeem-invite", body: Body(code: code))
+        let _: Ok = try await send("functions/v1/redeem-invite", body: Body(code: code, currency: currency))
+    }
+
+    /// Name, date of birth and place. Date of birth and place are kept once
+    /// the server has them; sending them again changes nothing.
+    struct ProfileRequest: Encodable {
+        var displayName: String?
+        var birthDate: String?
+        var country: String?
+        var region: String?
+    }
+
+    struct SavedProfile: Decodable {
+        let displayName: String?
+        let inviteCode: String?
+        let country: String?
+        let region: String?
+        let hasBirthDate: Bool
+        let paidRacesAvailable: Bool
+    }
+
+    func saveProfile(_ req: ProfileRequest) async throws -> SavedProfile {
+        try await send("functions/v1/save-profile", body: req)
     }
 
     func submitDispute(raceID: UUID, date: String, note: String, image: Data?) async throws {
@@ -311,6 +340,10 @@ final class APIClient {
         let entryUnits: Int
         let currency: String
         let startsAt: Date
+        var birthYear: Int? = nil
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
     }
 
     struct HostPurseReply: Decodable {
@@ -351,11 +384,16 @@ final class APIClient {
         var vaultCents: Int? = nil
         var creditCents: Int? = nil
         var inviteCode: String? = nil
+        var currency: String? = nil
+        var displayName: String? = nil
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
     }
 
     func me() async throws -> Me? {
         guard let id = session?.userID else { return nil }
-        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league,vault_cents,credit_cents,invite_code&id=eq.\(id)")
+        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league,vault_cents,credit_cents,invite_code,currency,display_name,birth_date,country,region&id=eq.\(id)")
         return rows.first
     }
 

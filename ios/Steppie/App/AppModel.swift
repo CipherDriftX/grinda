@@ -93,7 +93,8 @@ final class AppModel {
         ledger.filter { $0.kind == .kept }.map(\.amount).reduce(Money.zero(currency)) { $0 + $1 }
     }
 
-    var currency: String { Money.localCurrency }
+    /// The server's currency for this person once money has moved; the phone's before that.
+    var currency: String { profile.currency ?? Money.localCurrency }
 
     // MARK: Purses
 
@@ -313,9 +314,9 @@ final class AppModel {
     }
 
     func bootstrap() async {
-        if profile.inviteCode == nil {
+        // A real code comes from the server (made at sign-up); only the demo makes one up.
+        if isDemo, profile.inviteCode == nil {
             profile.inviteCode = Invite.makeCode(name: profile.displayName)
-            persist()
         }
         if !isDemo {
             store.start(onChange: { [weak self] pro in self?.isPro = pro },
@@ -494,12 +495,13 @@ final class AppModel {
     // MARK: Entering races
 
     enum EnterError: LocalizedError {
-        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, badCode, badLink
+        case needsSignIn, underage, notAvailableHere, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, badCode, badLink
 
         var errorDescription: String? {
             switch self {
-            case .needsSignIn: "Sign in with Apple to put money on a race."
+            case .needsSignIn: "Sign in with Apple and tell us your date of birth and where you live to put money on a race."
             case .underage: "Staked races are for adults 18 and over. Practice laps are open to everyone."
+            case .notAvailableHere: "Paid races aren't available where you live. Free races and your Vault still work."
             case .healthMissing: "Connect Apple Health first so your steps count."
             case .alreadyRunning: "You already have a race running. Steppie Pro lets you run up to five at once."
             case .purseClosed: "This purse has already started. A new one opens every week."
@@ -513,10 +515,7 @@ final class AppModel {
     func canEnter(_ t: RaceTemplate) -> EnterError? {
         if !healthConnected { return .healthMissing }
         if t.kind == .staked && liveRaces.filter({ !$0.isPractice }).count >= raceLimit { return .alreadyRunning }
-        if t.kind == .staked {
-            if !profile.isSignedIn && !isDemo { return .needsSignIn }
-            if !profile.isAdult && !isDemo { return .underage }
-        }
+        if t.kind == .staked, !isDemo, let e = moneyGate() { return e }
         return nil
     }
 
@@ -553,7 +552,8 @@ final class AppModel {
             let reply = try await api.createStake(.init(
                 templateId: t.id, stakeCents: stake.cents, currency: stake.currency,
                 timezone: TimeZone.current.identifier, startDate: Self.dayFormatter.string(from: dates[0]),
-                birthYear: profile.birthYear, shieldsEquipped: race.shieldsEquipped, comebackOf: comebackOf
+                birthYear: profile.birthYear, birthDate: profile.birthDate, country: profile.country, region: profile.region,
+                shieldsEquipped: race.shieldsEquipped, comebackOf: comebackOf
             ))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
@@ -586,8 +586,16 @@ final class AppModel {
         if !p.isOpen { return .purseClosed }
         if !healthConnected { return .healthMissing }
         if liveRaces.filter({ !$0.isPractice }).count >= raceLimit { return .alreadyRunning }
-        if !profile.isSignedIn && !isDemo { return .needsSignIn }
-        if !profile.isAdult && !isDemo { return .underage }
+        if !isDemo, let e = moneyGate() { return e }
+        return nil
+    }
+
+    /// What stops this person putting money in, as far as the phone knows.
+    /// The server checks again with its own region and age rules.
+    func moneyGate() -> EnterError? {
+        if profile.needsDetails { return .needsSignIn }
+        if !profile.isAdult { return .underage }
+        if !profile.paidRacesAvailable { return .notAvailableHere }
         return nil
     }
 
@@ -616,7 +624,9 @@ final class AppModel {
 
         if !isDemo {
             let reply = try await api.joinPurse(.init(purseId: p.id, timezone: TimeZone.current.identifier,
-                                                      birthYear: profile.birthYear, shieldsEquipped: race.shieldsEquipped))
+                                                      birthYear: profile.birthYear, birthDate: profile.birthDate,
+                                                      country: profile.country, region: profile.region,
+                                                      shieldsEquipped: race.shieldsEquipped))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
             race.status = .active
@@ -688,6 +698,29 @@ final class AppModel {
         profile.vaultCents = me.vaultCents ?? profile.vaultCents
         profile.creditCents = me.creditCents ?? profile.creditCents
         profile.inviteCode = me.inviteCode ?? profile.inviteCode
+        profile.currency = me.currency ?? profile.currency
+        if let n = me.displayName, !n.isEmpty { profile.displayName = n }
+        if let b = me.birthDate { profile.birthDate = b }
+        if let c = me.country {
+            profile.country = c
+            profile.region = me.region
+        }
+        persist()
+    }
+
+    /// Sends name, date of birth and place. The server keeps date of birth and
+    /// place once set and says whether paid races are open where this person lives.
+    func saveProfile() async throws {
+        guard !isDemo, api.isConfigured, api.session != nil else { return }
+        let name = profile.displayName?.trimmingCharacters(in: .whitespaces)
+        let r = try await api.saveProfile(.init(displayName: name?.isEmpty == false ? name : nil, birthDate: profile.birthDate,
+                                                country: profile.country, region: profile.region))
+        if let c = r.country {
+            profile.country = c
+            profile.region = r.region
+        }
+        profile.inviteCode = r.inviteCode ?? profile.inviteCode
+        profile.paidRacesAvailable = r.paidRacesAvailable
         persist()
     }
 
@@ -772,16 +805,26 @@ final class AppModel {
                                claimExpiresAt: c.claimExpiresAt, delayed: c.delayed)
     }
 
-    /// A friend's code: $5 of entry credit for you now, $5 for them after your first paid entry.
+    /// A friend's code: entry credit for you now, a bonus for them after your
+    /// first paid entry. Before sign-in (onboarding) the code waits and is
+    /// sent right after; the server books the credit.
     func redeemInvite(_ raw: String) async throws {
         let code = raw.trimmingCharacters(in: .whitespaces).uppercased()
         guard Invite.isValid(code), code != profile.inviteCode, profile.invitedBy == nil else { throw EnterError.badCode }
-        // Before sign-in (onboarding) the code waits here and is sent right after.
-        if !isDemo && api.isConfigured && profile.isSignedIn { try await api.redeemInvite(code: code) }
-        profile.invitedBy = code
-        profile.creditCents += Invite.newMemberCreditCents
-        ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Code \(code)", kind: .credit,
-                                  amount: Money(cents: Invite.newMemberCreditCents, currency: currency), reference: "inv_\(code)"), at: 0)
+        if isDemo {
+            profile.invitedBy = code
+            profile.creditCents += Invite.newMemberCreditCents
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Code \(code)", kind: .credit,
+                                      amount: Money(cents: Invite.newMemberCreditCents, currency: currency), reference: "inv_\(code)"), at: 0)
+        } else if api.isConfigured, profile.isSignedIn {
+            try await api.redeemInvite(code: code, currency: currency)
+            profile.invitedBy = code
+            profile.pendingInvite = nil
+            await refreshMe()
+            await refreshLedger()
+        } else {
+            profile.pendingInvite = code
+        }
         persist()
         Haptics.success()
     }
@@ -804,11 +847,13 @@ final class AppModel {
     /// Returns nil if the person closed the payment sheet.
     func hostPurse(name raw: String, kind: PurseKind, dailyGoal: Int, days: Int, entryUnits: Int, startsAt: Date) async throws -> Purse? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !profile.isSignedIn && !isDemo { throw EnterError.needsSignIn }
+        if !isDemo, let e = moneyGate() { throw e }
         var p: Purse
         if !isDemo && api.isConfigured {
             let reply = try await api.hostPurse(.init(name: name, kind: kind.rawValue, dailyGoal: dailyGoal, days: days,
-                                                      entryUnits: entryUnits, currency: currency, startsAt: startsAt))
+                                                      entryUnits: entryUnits, currency: currency, startsAt: startsAt,
+                                                      birthYear: profile.birthYear, birthDate: profile.birthDate,
+                                                      country: profile.country, region: profile.region))
             if let checkout = reply.checkout {
                 guard try await payHostFee(checkout, purse: reply.purse.id) else { return nil }
             }
@@ -857,12 +902,18 @@ final class AppModel {
         try? await health.saveWeight(kg: kg, date: .now)
     }
 
-    func signedIn(appleUserID: String, name: String?) {
+    /// After Sign in with Apple: saves name, date of birth and place on the
+    /// server, then sends a friend's code typed during onboarding.
+    func signedIn(appleUserID: String, name: String?) async throws {
         profile.appleUserID = appleUserID
         if let name, !name.isEmpty { profile.displayName = name }
         persist()
-        if let code = profile.invitedBy, !isDemo, api.isConfigured {
-            Task { try? await api.redeemInvite(code: code) }
+        await refreshMe()        // a returning account: the server's name, place and balances
+        try await saveProfile()
+        if let code = profile.pendingInvite {
+            profile.pendingInvite = nil
+            do { try await redeemInvite(code) } catch { lastError = "Code \(code): \(error.localizedDescription)" }
+            persist()
         }
     }
 
