@@ -1,10 +1,12 @@
 // Starts a member purse. Crew: private, code only, up to 12, free. Public
 // (host): listed for everyone, the host earns 5% on top of every entry. A
-// public purse costs HOST_CREATE_CENTS (Vault first, then card), free once a
-// month with Pro. It's listed once paid.
+// public purse costs HOST_CREATE_CENTS (Vault first, then a Whop checkout),
+// free once a month with Pro. It's listed once paid; an unpaid one is called
+// off after an hour and its Vault part goes back.
 import {
-  admin, handler, HOST_CREATE_CENTS, HttpError, json, requireUser, stripe, STRIPE_API_VERSION, stripeCustomer,
+  admin, CARD_MIN, handler, HOST_CREATE_CENTS, HttpError, json, moneyError, requireUser,
 } from "../_shared/common.ts";
+import { createCheckout } from "../_shared/whop.ts";
 
 type Body = {
   name: string;
@@ -19,6 +21,7 @@ type Body = {
 const GOALS = [5000, 7500, 10000, 12500, 15000];
 const LENGTHS = [1, 3, 5, 7, 14, 21, 30];
 const ENTRIES = [5, 10, 20, 25, 50, 100];
+const MAX_HOSTED = 3;
 
 Deno.serve(handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -42,79 +45,65 @@ Deno.serve(handler(async (req) => {
     throw new HttpError(403, "Purses are for adults 18 and over.");
   }
 
-  const { count: hosting } = await db.from("purses").select("id", { count: "exact", head: true })
-    .eq("host_id", user.id).is("settled_at", null);
-  if ((hosting ?? 0) >= 3) throw new HttpError(409, "You can host three purses at a time.");
-
-  const code = await uniqueCode(db, name);
-  const id = `member-${crypto.randomUUID().slice(0, 8)}`;
+  // A public purse still waiting for its card: hand back the same checkout.
+  const { data: open } = await db.from("purses").select("*").eq("host_id", user.id).eq("listed", false)
+    .not("host_checkout_url", "is", null).eq("name", name).maybeSingle();
+  if (open) {
+    return json({ purse: boardRow(open, profile.display_name), checkout: { id: open.host_checkout_id, url: open.host_checkout_url } });
+  }
 
   // Public purses: free once a month with Pro, otherwise the host fee.
   const month = new Date().toISOString().slice(0, 7) + "-01";
-  const free = body.kind === "crew" || (profile.is_pro && profile.host_free_month !== month);
-  const fee = free ? 0 : HOST_CREATE_CENTS;
-  const fromVault = Math.min(profile.vault_cents ?? 0, fee);
-  const fromCard = fee - fromVault;
-
-  const { data: purse, error } = await db.from("purses").insert({
-    id, name,
-    tagline: body.kind === "crew" ? `A private purse for ${firstName(profile.display_name)}'s crew.` : `Hosted by ${firstName(profile.display_name)}.`,
-    kind: body.kind,
-    art: body.kind === "crew" ? "crew" : "megaphone",
-    daily_goal: body.daily_goal,
-    days: body.days,
-    entry_cents: body.entry_units * 100,
-    currency: body.currency,
-    starts_on: startsOn,
-    host_id: user.id,
-    code,
-    cap: body.kind === "crew" ? 12 : null,
-    listed: fromCard === 0,
-  }).select().single();
-  if (error || !purse) throw error ?? new Error("insert failed");
-
-  if (body.kind === "host" && profile.is_pro && fee === 0) {
-    await db.from("profiles").update({ host_free_month: month }).eq("id", user.id);
-  }
-  if (fromVault > 0) {
-    const { error: e } = await db.rpc("adjust_balance", { uid: user.id, vault_delta: -fromVault, credit_delta: 0 });
-    if (e) {
-      await db.from("purses").delete().eq("id", id);
-      throw new HttpError(409, "Your balance changed. Try again.");
-    }
-    await db.from("ledger_entries").insert({
-      race_id: null, user_id: user.id, kind: "fee", amount_cents: fromVault, currency: body.currency,
-      stripe_ref: `host_${id}`, label: `Hosting ${name}`,
-    });
+  const proFree = body.kind === "host" && profile.is_pro && profile.host_free_month !== month;
+  const fee = body.kind === "crew" || proFree ? 0 : HOST_CREATE_CENTS;
+  let fromVault = profile.currency === body.currency || !profile.currency ? Math.min(profile.vault_cents ?? 0, fee) : 0;
+  let fromCard = fee - fromVault;
+  if (fromCard > 0 && fromCard < CARD_MIN) {
+    fromVault -= CARD_MIN - fromCard;
+    fromCard = CARD_MIN;
   }
 
+  const id = `member-${crypto.randomUUID().slice(0, 8)}`;
+  const tagline = body.kind === "crew"
+    ? `A private purse for ${firstName(profile.display_name)}'s crew.`
+    : `Hosted by ${firstName(profile.display_name)}.`;
+  let error = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const code = await uniqueCode(db, name);
+    ({ error } = await db.rpc("open_host_purse", {
+      uid: user.id,
+      spec: {
+        id, name, tagline, kind: body.kind, art: body.kind === "crew" ? "crew" : "megaphone",
+        daily_goal: body.daily_goal, days: body.days, entry_cents: body.entry_units * 100, currency: body.currency,
+        starts_on: startsOn, code, cap: body.kind === "crew" ? 12 : null,
+        fee_cents: fee, from_vault: fromVault, from_card: fromCard, free_month: proFree ? month : null,
+      },
+      max_hosted: MAX_HOSTED,
+    }));
+    if (!error?.message?.includes("purses_code_key")) break; // a code taken between check and insert: try another
+  }
+  if (error) throw moneyError(error);
+
+  const { data: purse } = await db.from("purses").select("*").eq("id", id).single();
   const reply = boardRow(purse, profile.display_name);
-  if (fromCard === 0) return json({ purse: reply, payment: null });
+  if (fromCard === 0) return json({ purse: reply, checkout: null });
 
-  const customerId = await stripeCustomer(db, user.id, profile);
-  const intent = await stripe.paymentIntents.create({
-    amount: fromCard,
-    currency: body.currency.toLowerCase(),
-    customer: customerId,
-    payment_method_types: ["card"],
-    description: `Steppie host fee: ${name}`,
-    statement_descriptor_suffix: "STEPPIE HOST",
-    metadata: { purse_id: id, user_id: user.id, kind: "host_fee" },
-  }, { idempotencyKey: `host-${id}` });
-  const key = await stripe.ephemeralKeys.create({ customer: customerId }, { apiVersion: STRIPE_API_VERSION });
-
-  return json({
-    purse: reply,
-    payment: {
-      race_id: crypto.randomUUID(), // PaymentSheet reply shape; no race for a host fee
-      bib_number: 0,
-      payment_intent_client_secret: intent.client_secret,
-      customer_id: customerId,
-      ephemeral_key: key.secret,
-      publishable_key: Deno.env.get("STRIPE_PUBLISHABLE_KEY"),
-      capture_method: "automatic",
-    },
-  });
+  let checkout;
+  try {
+    checkout = await createCheckout({
+      amountCents: fromCard,
+      currency: body.currency,
+      title: `Host a purse: ${name}`,
+      description: "Your purse is listed for everyone once this is paid. You earn 5% on top of every entry.",
+      meta: { kind: "host", purse_id: id, user_id: user.id },
+    });
+  } catch (e) {
+    await db.rpc("cancel_host_purse", { pid: id });
+    console.error("checkout", e);
+    throw new HttpError(502, "Card payments are down for a moment. Nothing was charged; try again soon.");
+  }
+  await db.from("purses").update({ host_checkout_id: checkout.id, host_checkout_url: checkout.purchase_url }).eq("id", id);
+  return json({ purse: reply, checkout: { id: checkout.id, url: checkout.purchase_url } });
 }));
 
 function firstName(n: string | null): string {
