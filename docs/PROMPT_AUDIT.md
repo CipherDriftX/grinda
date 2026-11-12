@@ -39,10 +39,10 @@ Overall complexity: **High**. The brief bundles product strategy, brand identity
 Overall coverage: **Limited**. Vision is clear; operational and legal edges are missing.
 
 ### Coverage gaps (resolved in build)
-- **Apple payments policy.** Real-money stakes are not a digital good (guideline 3.1.1). Commitment apps with Stripe pre-auth (e.g. Forfeit) are live on the App Store. Stakes go through Stripe; the Pro subscription goes through StoreKit.
-- **Gambling law.** A prize pool funded by losers is a contest. The owner chose "we keep forfeits": a commitment contract with no chance element and no prize. Legal review per market is still required (DE: consumer-law limits on contractual penalties, BGB §309 Nr. 6 / §343).
-- **Cheating.** Steppa reviewers complain about "20k steps within hours". Mitigation: user-entered samples are ignored, cadence plausibility checks, and App Attest.
-- **Settlement delays.** Steppa's top complaint is 1 to 2 days to settle. Steppie settles 3 hours after the day closes and releases holds instantly.
+- **Apple payments policy.** Real-money stakes are not a digital good (guideline 3.1.1). Real-money stakes and entries go through Whop's hosted checkout; the Pro subscription and Shields go through StoreKit.
+- **Gambling law.** A prize pool funded by losers is a contest. Solo races are a commitment contract with no chance element and no prize ("we keep forfeits"). Purses came later: finishers split the entries of those who miss, which makes them a skill contest with a prize, so paid play is 18+ and blocked by region (`AGE_RULES`, `BLOCKED_REGIONS`). Legal review per market is still required (DE: consumer-law limits on contractual penalties, BGB §309 Nr. 6 / §343).
+- **Cheating.** Steppa reviewers complain about "20k steps within hours". Mitigation: user-entered samples are ignored and implausible days go to a person. App Attest is not built yet.
+- **Settlement delays.** Steppa's top complaint is 1 to 2 days to settle. Solo races settle 3 hours after the last day closes, purses after 24 hours, and a review holds back only the share under review.
 - **Health claims.** No medical claims. Show a disclaimer, and estimate kcal with a transparent formula.
 - **Minors.** Staking requires age 18+.
 - **Account deletion** (App Store 5.1.1(v)): included in-app.
@@ -50,5 +50,5 @@ Overall coverage: **Limited**. Vision is clear; operational and legal edges are 
 ### Missing error handling (resolved in build)
 - HealthKit permission denied: the app explains why it is needed, links to Settings, and blocks staking until access is granted.
 - Health data syncs late (e.g. Garmin): a 3-hour grace window after day close before settlement.
-- Payment fails or the hold expires: challenge not activated; a hold nearing expiry is converted to a capture-then-refund flow.
+- Payment fails or the checkout is closed: the race is not activated and the balance and Shields come back (`cancel-checkout` at once, or `settle` after an hour).
 - Steps sync but the device is offline at day end: the device uploads on next launch; the server settles on the latest submission within grace.

@@ -56,7 +56,7 @@ const lines = [
 
 const thread = [
   lines,
-  `How it works: pick a daily step goal, stake €5–€500. Short races are only a hold on your card. Finish and it's released; miss and it's kept.`,
+  `How it works: pick a daily step goal, stake €5 to €500. Finish and every cent comes back; miss and it's kept.`,
   `Every number above is live from our database. We publish what we keep too: ${money(eur.kept_cents, "EUR")}${usd.kept_cents ? ` + ${money(usd.kept_cents, "USD")}` : ""} from missed races. We'd rather you finish.`,
 ];
 
