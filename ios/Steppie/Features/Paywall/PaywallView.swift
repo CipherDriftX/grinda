@@ -31,6 +31,13 @@ struct PaywallView: View {
                     .font(.subheadline)
                     .foregroundStyle(Palette.onFieldSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if !model.profile.paidRacesAvailable {
+                    // Said before the purchase, not after: the fee and host perks need paid races.
+                    Text("Paid races aren't open to you where you live, so the fee and host perks won't apply. Insights, the badge and the icon still do.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)

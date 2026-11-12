@@ -541,7 +541,7 @@ final class AppModel {
             switch self {
             case .needsSignIn: "Sign in with Apple and tell us your date of birth and where you live to put money on a race."
             case .underage: "Staked races are for adults 18 and over. Practice laps are open to everyone."
-            case .notAvailableHere: "Paid races aren't available where you live. Free races and your Vault still work."
+            case .notAvailableHere: "Paid races aren't open to you where you live: the place blocks them, or its minimum age is above yours. Free races and your Vault still work."
             case .healthMissing: "Connect Apple Health first so your steps count."
             case .alreadyRunning: "You already have a race running. Steppie Pro lets you run up to five at once."
             case .purseClosed: "This purse has already started. A new one opens every week."
