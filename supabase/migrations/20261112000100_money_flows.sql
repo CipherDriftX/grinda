@@ -23,8 +23,27 @@ alter table public.purses
   add column host_paid_from_vault_cents int not null default 0 check (host_paid_from_vault_cents >= 0),
   add column host_checkout_url text;
 
+-- One currency per person. The Vault and entry credit are plain numbers, so
+-- everything a person pays or wins must be in the same currency. It is set by
+-- the first money move (or invite credit) and never changes after.
+alter table public.profiles add column currency text check (currency in ('EUR', 'USD'));
+
 -- A card dispute (chargeback) stops cash-outs until a person looks at it.
 alter table public.profiles add column payouts_frozen_at timestamptz, add column payouts_frozen_reason text;
+
+-- Locks the person's row for one money move and pins their currency.
+create function public.lock_money(uid uuid, cur text)
+returns void language plpgsql volatile security definer set search_path = public as $$
+declare v_cur text;
+begin
+  select currency into v_cur from profiles where id = uid for update;
+  if not found then raise exception 'no_profile'; end if;
+  if v_cur is null then
+    update profiles set currency = cur where id = uid;
+  elsif v_cur <> cur then
+    raise exception 'wrong_currency';
+  end if;
+end $$;
 
 -- Ledger lines for a race that is now fully paid --------------------------------------------
 create function public.book_paid_race(rid uuid, pay_ref text, bonus int)
@@ -69,8 +88,7 @@ declare
   v_n int;
 begin
   -- Balances, Shields and the race limit are all read under this lock.
-  perform 1 from profiles where id = uid for update;
-  if not found then raise exception 'no_profile'; end if;
+  perform lock_money(uid, spec ->> 'currency');
 
   if v_credit < 0 or v_vault < 0 or v_card < 0 or v_fee < 0 or v_host < 0
      or v_credit + v_vault + v_card <> v_stake + v_fee + v_host
@@ -174,8 +192,7 @@ declare
   v_month date := (spec ->> 'free_month')::date;
   v_n int;
 begin
-  perform 1 from profiles where id = uid for update;
-  if not found then raise exception 'no_profile'; end if;
+  perform lock_money(uid, spec ->> 'currency');
   if v_vault < 0 or v_card < 0 or v_vault + v_card <> v_fee or (v_card > 0 and v_card < 50) then raise exception 'bad_split'; end if;
 
   select count(*) into v_n from purses where host_id = uid and settled_at is null;
@@ -305,6 +322,7 @@ returns void language sql volatile security definer set search_path = public as 
   update profiles set payouts_frozen_at = coalesce(payouts_frozen_at, now()), payouts_frozen_reason = why where id = uid
 $$;
 
+revoke all on function public.lock_money(uuid, text) from public, anon, authenticated;
 revoke all on function public.book_paid_race(uuid, text, int) from public, anon, authenticated;
 revoke all on function public.open_race(uuid, jsonb, int, int) from public, anon, authenticated;
 revoke all on function public.cancel_pending(uuid) from public, anon, authenticated;

@@ -36,6 +36,7 @@ export function moneyError(e: { code?: string; message?: string }, isPro = false
   if (e.code === "23514" || m.includes("_cents_check")) return new HttpError(409, "Your balance changed. Try again.");
   if (m.includes("too_many_hosted")) return new HttpError(409, "You can host three purses at a time.");
   if (m.includes("free_month_used")) return new HttpError(409, "You've used this month's free Pro purse.");
+  if (m.includes("wrong_currency")) return new HttpError(409, "Your Steppie balance is in another currency. Pick one in your currency.");
   if (m.includes("no_profile")) return new HttpError(403, "Finish setting up your profile first.");
   return new Error(`money function failed: ${e.code ?? ""} ${m}`);
 }
@@ -176,6 +177,29 @@ export function quoteEntry(entryCents: number, kind: string, isPro: boolean, cre
     fromCard = CARD_MIN;
   }
   return { entry: entryCents, fee, host, total, fromCredit, fromVault, fromCard, funding: "card" };
+}
+
+/**
+ * Solo stakes: no fee (Steppie keeps missed stakes). The Vault pays first, a
+ * card the rest. Entry credit never pays a stake, because a finished stake
+ * comes back as Vault money and credit must not turn into cash.
+ */
+export function quoteStake(stakeCents: number, vaultCents: number): { fromVault: number; fromCard: number } {
+  let fromVault = Math.min(Math.max(0, vaultCents), stakeCents);
+  let fromCard = stakeCents - fromVault;
+  if (fromCard > 0 && fromCard < CARD_MIN) {
+    fromVault -= CARD_MIN - fromCard;
+    fromCard = CARD_MIN;
+  }
+  return { fromVault, fromCard };
+}
+
+/** A money-moving race may start today or tomorrow in the walker's zone, never in the past. */
+export function startAllowed(start: string, tz: string, now = new Date()): boolean {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const t = new Date(`${today}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + 1);
+  return start === today || start === t.toISOString().slice(0, 10);
 }
 
 export function hostFee(entryCents: number, kind: string): number {

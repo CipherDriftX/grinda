@@ -70,7 +70,9 @@ Deno.test("money that doesn't add up, or more than the balance, opens nothing", 
   await assertRejects(() => open(db, uid, entry({ from_vault: 2100, from_card: 30 })), Error, "bad_split"); // card under 50
   await assertRejects(() => open(db, uid, entry()), Error, "vault_cents");                              // overdraft
   await assertRejects(() => open(db, uid, stake({ from_credit: 1000, from_card: 0 })), Error, "bad_split"); // credit is purse-only
-  assertEquals((await one<{ n: number }>(db, "select count(*)::int as n from races")).n, 0);
+  await open(db, uid, stake({ stake_cents: 500, from_card: 500 }), 5);                                    // pins USD
+  await assertRejects(() => open(db, uid, stake({ currency: "EUR" }), 5), Error, "wrong_currency");
+  assertEquals((await one<{ n: number }>(db, "select count(*)::int as n from races")).n, 1);
   assertEquals(await balances(db, uid), [1000, 0, 1]);
   await db.close();
 });
