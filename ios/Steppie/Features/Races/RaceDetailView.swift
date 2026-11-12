@@ -53,8 +53,14 @@ struct RaceDetailView: View {
             ForEach(Array(race.days.enumerated()), id: \.offset) { i, day in
                 HStack {
                     Text("Day \(i + 1)").font(.headline).frame(width: 64, alignment: .leading)
-                    Text(day.date.formatted(.dateTime.weekday(.abbreviated).day()))
-                        .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(day.date.formatted(.dateTime.weekday(.abbreviated).day()))
+                            .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                        if !race.isPractice, day.state != .upcoming, let at = day.syncedAt {
+                            Text("Synced \(at.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption2).foregroundStyle(Palette.inkSecondary)
+                        }
+                    }
                     Spacer()
                     Text(day.state == .upcoming ? "–" : day.steps.formatted())
                         .font(BrandFont.numerals(22, relativeTo: .body))

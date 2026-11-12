@@ -125,6 +125,8 @@ struct DayRecord: Identifiable, Codable, Hashable {
     var steps: Int
     var goal: Int
     var state: DayState
+    /// When the server last took this day's steps, so a walker can see it has them.
+    var syncedAt: Date? = nil
 
     var id: Date { date }
     var progress: Double { goal > 0 ? min(Double(steps) / Double(goal), 1) : 0 }

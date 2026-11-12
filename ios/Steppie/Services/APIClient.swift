@@ -183,9 +183,12 @@ final class APIClient {
         let days: [DaySubmission]
     }
 
-    func submitSteps(_ body: SubmitSteps) async throws {
-        struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/submit-steps", body: body)
+    /// Returns when the server saved each day ("2026-11-12": time). A day
+    /// sent again within a minute isn't saved again and isn't listed.
+    func submitSteps(_ body: SubmitSteps) async throws -> [String: Date] {
+        struct Reply: Decodable { let ok: Bool; let synced: [String: Date]? }
+        let r: Reply = try await send("functions/v1/submit-steps", body: body)
+        return r.synced ?? [:]
     }
 
     struct RemoteRace: Decodable {

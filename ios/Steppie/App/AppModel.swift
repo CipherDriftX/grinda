@@ -477,7 +477,11 @@ final class AppModel {
                 if let s = recent[key] { return .init(date: key, steps: max(s.total, day.steps), hourly: s.hourly) }
                 return .init(date: key, steps: day.steps, hourly: [])
             }
-            try? await api.submitSteps(.init(raceId: race.id, days: days))
+            guard let synced = try? await api.submitSteps(.init(raceId: race.id, days: days)), !synced.isEmpty,
+                  let i = races.firstIndex(where: { $0.id == race.id }) else { continue }
+            for j in races[i].days.indices {
+                if let at = synced[fmt.string(from: races[i].days[j].date)] { races[i].days[j].syncedAt = at }
+            }
         }
         if let remote = try? await api.races() {
             for r in remote {
