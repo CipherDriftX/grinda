@@ -73,7 +73,7 @@ Each point is a top complaint in Steppa's App Store reviews or on Reddit.
 - **Sandbox checks.** Transfer and refund fees, a EUR transfer from a USD balance, what a claim link pays in EUR, whether Apple Pay shows inside the in-app checkout sheet, and what Whop adds to the redirect URL.
 - **The lawyer's lists.** Age and region checks are in the code; `BLOCKED_REGIONS` and `AGE_RULES` still need a lawyer to fill them. In production nothing pays until `BLOCKED_REGIONS` is set.
 - **App Attest.** Not built. The server checks shape and plausibility of step data, and people review flags, but nothing proves a request came from the real app.
-- **Fast lane.** Finishers whose days all synced on time could be paid before the 48-hour wait; not built.
+- **Fast lane.** Finishers whose days all synced on time could be paid before the 24-hour wait; not built.
 
 ## Money in and out
 
