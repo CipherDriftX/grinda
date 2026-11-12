@@ -199,12 +199,36 @@ final class AppModel {
         askForRating = true
     }
 
+    // MARK: Pro
+
+    /// The account id, sent with App Store purchases as appAccountToken so
+    /// the server can tie a subscription or Shields to this account.
+    var accountToken: UUID? { api.session.flatMap { UUID(uuidString: $0.userID) } }
+
+    /// Pro as the server has it after asking Apple; that's what fees and race
+    /// limits use. Offline or before sign-in, the phone's StoreKit entitlement
+    /// shows it until the server answers.
+    func checkPro(transaction: StoreKit.Transaction? = nil) async {
+        guard !isDemo else { return }
+        let local: StoreKit.Transaction?
+        if let transaction { local = transaction } else { local = await StoreService.proTransaction() }
+        guard api.isConfigured, api.session != nil else { isPro = local != nil; return }
+        do {
+            isPro = try await api.verifyPro(transactionID: local?.id).isPro
+        } catch APIClient.APIError.server(let message) where local != nil {
+            // Apple's answer was no, or the subscription belongs to another Steppie account.
+            isPro = false
+            lastError = message
+        } catch {
+            isPro = local != nil
+        }
+    }
+
     // MARK: Shields
 
     func buyShields(_ product: StoreKit.Product) async {
         do {
-            let account = api.session.flatMap { UUID(uuidString: $0.userID) }
-            guard let t = try await StoreService.buy(product, account: account) else { return }
+            guard let t = try await StoreService.buy(product, account: accountToken) else { return }
             await credit(t)
             await t.finish()
             Haptics.success()
@@ -319,7 +343,7 @@ final class AppModel {
             profile.inviteCode = Invite.makeCode(name: profile.displayName)
         }
         if !isDemo {
-            store.start(onChange: { [weak self] pro in self?.isPro = pro },
+            store.start(onChange: { [weak self] in await self?.checkPro() },
                         onShields: { [weak self] t in await self?.credit(t) })
             health.observeSteps { [weak self] in Task { await self?.refresh() } }
         }
@@ -922,6 +946,7 @@ final class AppModel {
         persist()
         await refreshMe()        // a returning account: the server's name, place and balances
         try await saveProfile()
+        await checkPro()
         if let code = profile.pendingInvite {
             profile.pendingInvite = nil
             do { try await redeemInvite(code) } catch { lastError = "Code \(code): \(error.localizedDescription)" }

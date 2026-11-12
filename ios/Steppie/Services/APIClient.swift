@@ -18,7 +18,10 @@ final class APIClient {
 
     enum APIError: LocalizedError {
         case notConfigured
+        /// The server answered no (4xx), with a reason a person can read.
         case server(String)
+        /// The server or the network failed (5xx); worth trying again later.
+        case unavailable(String)
         /// A refusal the app acts on, e.g. "vault_not_empty" from delete-account.
         case refused(code: String, message: String, vaultCents: Int?)
         case unauthorized
@@ -26,7 +29,7 @@ final class APIClient {
         var errorDescription: String? {
             switch self {
             case .notConfigured: "This build isn't connected to the Steppie server."
-            case .server(let m): m
+            case .server(let m), .unavailable(let m): m
             case .refused(_, let m, _): m
             case .unauthorized: "Please sign in again."
             }
@@ -409,6 +412,18 @@ final class APIClient {
     }
 
     /// Credits Shields bought in the App Store; returns the new locker count.
+    struct ProReply: Decodable {
+        let isPro: Bool
+        let expiresAt: Date?
+    }
+
+    /// The server asks Apple about the subscription (this transaction, or the
+    /// one it already knows) and saves Pro on the profile.
+    func verifyPro(transactionID: UInt64?) async throws -> ProReply {
+        struct Body: Encodable { let transactionId: String? }
+        return try await send("functions/v1/verify-pro", body: Body(transactionId: transactionID.map { String($0) }))
+    }
+
     func grantShields(transactionID: UInt64) async throws -> Int {
         struct Body: Encodable { let transactionId: String }
         struct Reply: Decodable { let shields: Int }
@@ -464,6 +479,7 @@ final class APIClient {
         guard (200..<300).contains(code) else {
             let e = try? decoder.decode(ServerError.self, from: data)
             let message = e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code))."
+            if code >= 500 { throw APIError.unavailable(message) }
             if let c = e?.code, !c.isEmpty, e?.error != nil {
                 throw APIError.refused(code: c, message: message, vaultCents: e?.vaultCents)
             }

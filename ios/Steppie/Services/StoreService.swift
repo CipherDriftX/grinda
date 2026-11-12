@@ -11,29 +11,32 @@ final class StoreService {
 
     private var updates: Task<Void, Never>?
 
-    /// Streams entitlement changes (renewals, refunds, Family Sharing) to `onChange`,
-    /// and hands consumables that finish in the background to `onShields`.
-    func start(onChange: @escaping (Bool) -> Void, onShields: @escaping (Transaction) async -> Void) {
+    /// Calls `onChange` at start and on every entitlement change (renewals,
+    /// refunds, Family Sharing), and hands consumables that finish in the
+    /// background to `onShields`.
+    func start(onChange: @escaping () async -> Void, onShields: @escaping (Transaction) async -> Void) {
         updates?.cancel()
         updates = Task {
-            onChange(await Self.hasPro())
+            await onChange()
             for await update in Transaction.updates {
                 if case .verified(let t) = update {
                     if Self.shieldIDs.contains(t.productID) { await onShields(t) }
                     await t.finish()
                 }
-                onChange(await Self.hasPro())
+                await onChange()
             }
         }
     }
 
-    static func hasPro() async -> Bool {
+    /// The phone's current Pro transaction, if StoreKit has one. The server
+    /// asks Apple about it; this alone never turns Pro on for money rules.
+    static func proTransaction() async -> Transaction? {
         for await result in Transaction.currentEntitlements {
             if case .verified(let t) = result, productIDs.contains(t.productID), t.revocationDate == nil {
-                return true
+                return t
             }
         }
-        return false
+        return nil
     }
 
     /// When a free trial ends, if the person is in one and it will renew.
