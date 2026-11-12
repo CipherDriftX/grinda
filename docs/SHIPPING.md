@@ -22,7 +22,7 @@ To use a different bundle ID, change `bundleIdPrefix`, the `PRODUCT_BUNDLE_IDENT
 5. **App Information › App Store Server Notifications**: Version 2, production and sandbox URL `https://<ref>.supabase.co/functions/v1/app-store-notifications`. Renewals, refunds and expiries then reach the server even when the app is closed.
 6. **App Privacy**: Health & Fitness (steps, weight), Purchases, Name (Sign in with Apple), User ID, and Other Data (date of birth and country or state, used to check who may join paid races). All App Functionality, linked to the user, **no tracking**. Payments are taken by Whop, so card numbers never reach Steppie.
 7. **Users and Access › Integrations › App Store Connect API › +**: role **App Manager**. Download the `.p8` once, and note the Key ID and Issuer ID.
-8. **Age rating**: answer truthfully. Purses are skill contests with real-money prizes (finishers split the entries), so "Contests" is not "None". Paid races are 18+ (higher where `AGE_RULES` says) and blocked in `BLOCKED_REGIONS`; say so in the review notes. Shoe Boxes are cosmetic, earned by finishing and never sold, so they aren't paid random items.
+8. **Age rating**: answer truthfully. Purses are skill contests with real-money prizes (finishers split the entries), so "Contests" is not "None". Paid races are 18+ (19 or 21 where the age of majority is higher) and blocked in 9 US states; say so in the review notes. Shoe Boxes are cosmetic, earned by finishing and never sold, so they aren't paid random items.
 
 ## 3. Supabase (supabase.com)
 
@@ -68,7 +68,7 @@ cd functions && deno test --allow-env --allow-read _shared/          # Whop, App
 
 ## 5. Who may pay
 
-`BLOCKED_REGIONS` and `AGE_RULES` in `supabase/.env` decide where paid races are open and from what age. A lawyer fills them. In production an unset `BLOCKED_REGIONS` stops every paid race with "Paid races are paused", so a missing setting can never open everything. The app asks for date of birth and country (and state in the US, Canada and Australia) before the first money move; both are kept once saved. Cash-outs are never blocked.
+The defaults live in `supabase/functions/_shared/eligibility.ts` and copy Steppa's rules. Age: 18, or 19 or 21 where the age of majority is higher (US-AL, US-NE and seven Canadian provinces and territories at 19; US-MS and PR at 21). Blocked: US-AZ, US-AR, US-CT, US-DE, US-LA, US-MT, US-SC, US-SD, US-TN. Steppa doesn't publish its state list, so this is the list Skillz cash-tournament apps print on the App Store. `BLOCKED_REGIONS` and `AGE_RULES` in `supabase/.env` replace a default list when set (write the whole list; `none` clears it), so a lawyer can change them without a release. The app asks for date of birth and country (and state in the US, Canada and Australia) before the first money move; both are kept once saved. Cash-outs are never blocked.
 
 ## 6. The review desk
 
@@ -112,7 +112,7 @@ In **Actions › Release to TestFlight / App Store › Run workflow**, run these
 
 ## 9. Legal checklist before going live
 
-- [ ] A lawyer has checked purses (paid skill contests) in every country and US state you open, and filled `BLOCKED_REGIONS` and `AGE_RULES`.
+- [ ] A lawyer has checked purses (paid skill contests) in every country and US state you open, and confirmed or replaced the default `BLOCKED_REGIONS` and `AGE_RULES`.
 - [ ] Whop has approved the business model in writing.
 - [ ] Terms of service and Race Rules reviewed by a lawyer in DE (BGB §305 ff. on standard terms) and in the US states you launch in.
 - [ ] Privacy policy published at the URL in the store listing (GDPR Art. 9: health data needs explicit consent, which the HealthKit prompt plus onboarding copy provide; document it).

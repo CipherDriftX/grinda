@@ -71,7 +71,7 @@ Each point is a top complaint in Steppa's App Store reviews or on Reddit.
 
 - **Whop's yes.** Whop has to accept paid skill contests for this business, in writing.
 - **Sandbox checks.** Transfer and refund fees, a EUR transfer from a USD balance, what a claim link pays in EUR, whether Apple Pay shows inside the in-app checkout sheet, and what Whop adds to the redirect URL.
-- **The lawyer's lists.** Age and region checks are in the code; `BLOCKED_REGIONS` and `AGE_RULES` still need a lawyer to fill them. In production nothing pays until `BLOCKED_REGIONS` is set.
+- **A lawyer's check of the region lists.** The defaults copy Steppa's rules: 18+, 19 or 21 where the age of majority is higher, and paid play blocked in AZ, AR, CT, DE, LA, MT, SC, SD and TN (Steppa hides its own list; this is the one Skillz cash-tournament apps publish). A lawyer can replace either list through `BLOCKED_REGIONS` and `AGE_RULES` without a release. The check uses the place the person declared, once; Steppa also checks the phone's location when someone joins.
 - **App Attest.** Not built. The server checks shape and plausibility of step data, and people review flags, but nothing proves a request came from the real app.
 - **Fast lane.** Finishers whose days all synced on time could be paid before the 24-hour wait; not built.
 
@@ -79,7 +79,7 @@ Each point is a top complaint in Steppa's App Store reviews or on Reddit.
 
 - Entries are paid from entry credit and the Vault first, then by card on Whop's hosted checkout, opened inside the app. The entry goes live when Whop's webhook reaches the server. Apple in-app purchase is only used for Pro and Shields.
 - Winnings land in the Vault. Cash out from $5, up to $500 a day. Whop sends it to the Whop account you paid an entry with, or as a claim link if you haven't paid by card yet (USD only).
-- 18+ only for paid play (higher where `AGE_RULES` says). The app asks for date of birth and country (and state in the US, Canada and Australia) before the first payment, and the server blocks the regions in `BLOCKED_REGIONS`.
+- 18+ only for paid play: 19 in Alabama, Nebraska and the Canadian provinces and territories where the age of majority is 19, 21 in Mississippi and Puerto Rico. Not open in Arizona, Arkansas, Connecticut, Delaware, Louisiana, Montana, South Carolina, South Dakota or Tennessee. The app asks for date of birth and country (and state in the US, Canada and Australia) before the first payment, and the server blocks the regions in `BLOCKED_REGIONS`.
 
 ## Pro
 
@@ -87,5 +87,5 @@ Steppie Pro gives you 5 races at once (free accounts get 1), no fee when your ba
 
 ## Open questions
 
-- Which US states and EU countries block paid step contests? Ask a lawyer before money moves.
+- Is the 9-state list right for a walking contest, and does any EU country block it? Ask a lawyer before real money moves.
 - Whop's terms for skill contests in each launch country: get it in writing before launch.
