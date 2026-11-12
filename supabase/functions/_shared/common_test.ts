@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { consecutiveDates, hostFee, scheduleDates, quoteEntry, serviceFee, settleInstant, TEMPLATES, windowSteps } from "./common.ts";
+import { consecutiveDates, hostFee, scheduleDates, quoteEntry, quoteStake, serviceFee, settleInstant, startAllowed, TEMPLATES, windowSteps } from "./common.ts";
 
 Deno.test("settles 3h after local midnight (Berlin, CEST)", () => {
   // 2026-09-30 ends at 2026-10-01 00:00 CEST = 2026-09-30T22:00Z; +3h = 01:00Z
@@ -70,4 +70,20 @@ Deno.test("window steps count only inside the window", () => {
 
 Deno.test("purse days run back to back across month ends", () => {
   assertEquals(consecutiveDates("2026-10-30", 4), ["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02"]);
+});
+
+Deno.test("stake: Vault first, then a card of at least 50 cents", () => {
+  assertEquals(quoteStake(1000, 0), { fromVault: 0, fromCard: 1000 });
+  assertEquals(quoteStake(1000, 400), { fromVault: 400, fromCard: 600 });
+  assertEquals(quoteStake(1000, 5000), { fromVault: 1000, fromCard: 0 });
+  assertEquals(quoteStake(1000, 980), { fromVault: 950, fromCard: 50 });
+});
+
+Deno.test("a stake starts today or tomorrow in the walker's zone, never before", () => {
+  const now = new Date("2026-11-12T03:00:00Z"); // still Nov 11 in New York
+  assertEquals(startAllowed("2026-11-11", "America/New_York", now), true);
+  assertEquals(startAllowed("2026-11-12", "America/New_York", now), true);
+  assertEquals(startAllowed("2026-11-13", "America/New_York", now), false);
+  assertEquals(startAllowed("2026-11-10", "America/New_York", now), false);
+  assertEquals(startAllowed("2026-11-12", "Europe/Berlin", now), true);
 });
