@@ -35,17 +35,18 @@ export async function sendCashout(db: SupabaseClient, c: Cashout, whopUserId: st
         whopUserId, cents: c.amount_cents, currency: c.currency, key: c.id, note: "Steppie cash-out",
         meta: { cashout_id: c.id, user_id: c.user_id },
       });
-      await db.from("cashouts").update({ transfer_id: t.id, tracking_url: t.tracking_url ?? null, status: "processing", failure: null })
-        .eq("id", c.id);
+      await db.from("cashouts").update({ transfer_id: t.id, tracking_url: t.tracking_url ?? null, failure: null }).eq("id", c.id);
+      // Only forward: the transfer webhook may have marked it paid already.
+      await db.from("cashouts").update({ status: "processing" }).eq("id", c.id).eq("status", "requested");
       if (t.status === "succeeded") await db.rpc("cashout_paid", { cid: c.id });
       if (t.status === "failed") await db.rpc("cashout_failed", { cid: c.id, why: t.failure_reason ?? t.failure_code ?? "transfer failed" });
     } else {
       const expires = new Date(Date.now() + CLAIM_DAYS * 24 * 3600_000);
       const link = await createClaimLink(c.amount_cents, expires);
       await db.from("cashouts").update({
-        transfer_id: link.id, claim_url: link.claim_url, claim_expires_at: link.expires_at ?? expires.toISOString(),
-        status: "processing", failure: null,
+        transfer_id: link.id, claim_url: link.claim_url, claim_expires_at: link.expires_at ?? expires.toISOString(), failure: null,
       }).eq("id", c.id);
+      await db.from("cashouts").update({ status: "processing" }).eq("id", c.id).eq("status", "requested");
     }
   } catch (e) {
     const why = e instanceof WhopError ? e.message : String(e);
