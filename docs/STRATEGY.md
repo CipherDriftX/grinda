@@ -9,12 +9,12 @@ Steppie makes money when people back themselves: more people staking, bigger sta
 ```
 revenue / month =  active stakers × stakes per staker × average stake × miss rate
                  + Shields + Steppie Pro
-                 − Stripe fees − refunds of Comebacks
+                 − Whop fees − refunds of Comebacks
 ```
 
 Every lever below moves one of these terms. None of them works by making people fail more often. That lever exists ("go quiet after the deposit so they forget"), and we deliberately don't pull it:
 
-- **It's the most expensive money in the business.** People who forget are the people who file chargebacks ("I didn't know I'd be charged"). Stripe reviews accounts above roughly 0.75% disputes and can close payments for good. One closed Stripe account ends Steppie.
+- **It's the most expensive money in the business.** People who forget are the people who file chargebacks ("I didn't know I'd be charged"). Every payment processor reviews accounts with many disputes and can close payments for good. One closed Whop account ends Steppie.
 - **It breaks the legal case.** A commitment contract stays outside gambling law (GlüStV in Germany, state gambling law in the US) because the outcome is in the user's control. An app engineered so users fail undermines exactly that. EU dark-pattern rules (DSA Art. 25, UWG §§ 4a, 5a) and Apple's review guidelines (4.5.4 for push, 5.3 for real-money mechanics) add risk on top.
 - **It kills the funnel.** The second stake is where the lifetime value is. People who lost money because the app went silent don't come back, and they tell people.
 
@@ -28,7 +28,7 @@ Deposit contracts work for the people who sign them, but few people sign. In Hal
 |---|---|---|
 | **Loss framing** | Patel et al. (Ann Intern Med 2016): a "lose $1.40 a day" incentive got 45% of days to goal vs 30% control; the same money as a gain or lottery didn't beat control. | Copy is always "keep your €20", never "win". The stake is yours to keep, not a prize. |
 | **Endowed progress** | Nunes & Drèze (2006): a 10-stamp card with 2 stamps already in was finished 34% of the time, vs 19% for an empty 8-stamp card. | Onboarding ends with the **Starter Kit**: a bib with the first pin already in ("goal set, Health connected") and **1 free Shield**. |
-| **Hold, not charge** | Removes the perceived cost of saying yes: nothing leaves the account if you finish. | The 5-Day Sprint is the front door. Every pre-stake CTA says "hold". |
+| **All of it back** | Lowers the perceived cost of saying yes: finish and every cent comes back (the card part to the card, the Vault part to the Vault). | The 5-Day Sprint is the front door. Every pre-stake CTA says what comes back and when. |
 | **Shadow week** | The person's own data is the most credible evidence. | Today shows their last 7 days as if money had been on them: "5 of 7. With €10 on it, you'd have kept every cent." Real numbers only. |
 | **Fresh start effect** | Dai, Milkman & Riis (2014): gym visits jump 33% at the start of a week, 47% at a new semester. | Pip's invites lead with Mondays and the 1st of the month. |
 | **Social proof** | Only real numbers. | Public books in the Vault and on the site, from `public_stats`. |
@@ -70,7 +70,7 @@ Per 1,000 installs, first 90 days:
 | Pro conversion of stakers | 5% at €7.99/month |
 
 - Stakes: 150 × 4 = 600 stakes, €13,200 staked.
-- Kept: 24% × €13,200 = **€3,168**, minus Comeback refunds (say 20% of misses take one, 75% finish, 50% back: about €238) and Stripe fees (about €0.55 per captured or refunded stake, about €330). Net about **€2,600**.
+- Kept: 24% × €13,200 = **€3,168**, minus Comeback refunds (say 20% of misses take one, 75% finish, 50% back: about €238) and payment fees (Stripe's were about €0.55 per charged or refunded stake, about €330; Whop's are unknown until the sandbox shows them). Net about **€2,600** at Stripe's fees.
 - Shields: 600 × 0.15 × €1.99 × 0.7 ≈ **€125**.
 - Pro: 150 × 5% × €7.99 × 3 × 0.7 ≈ **€125**.
 - **≈ €2,850 per 1,000 installs in 90 days**, about €2.85 per install. Moving first-stake uptake from 14% to 25% is worth more than every other lever combined. That's why the pre-stake experience gets the most design.
@@ -79,17 +79,17 @@ Per 1,000 installs, first 90 days:
 
 1. Money outcome = steps only. No chance element touches money; random rewards are cosmetic and never sold.
 2. Never "bet", "wager", "odds", "jackpot" or casino language. Stakes, tables, backing yourself.
-3. Never a charge the user didn't see coming: holds for short races, the whole deal on one screen, hold-to-pin.
+3. Never a charge the user didn't see coming: the whole deal on one screen, hold-to-pin, and the price split (credit, Vault, card) shown before the checkout opens.
 4. One pace nudge while a stake is live, so "I forgot" never happens because of us.
 5. Opt-in for race invites, opt-out any time in Settings.
 6. 18+ for money. The Champion and Legend tables open only after finished races.
 7. Public books: returned vs kept, live.
 
-## 6. Money flow (Stripe)
+## 6. Money flow (Whop)
 
-- `create-stake` validates the template (or the Comeback rules), the table gates and the Shields in the locker, moves equipped Shields onto the race, and creates a PaymentIntent: `capture_method=manual` (a hold) for races that settle within 6 days, `automatic` otherwise.
-- `stripe-webhook` marks the stake `held` or `charged` and activates the race.
-- `settle` (pg_cron, every 15 min): a race is won if missed days ≤ grace days + equipped Shields. Unused Shields go back to the locker. Won: release the hold or refund in full, and for a Comeback also refund 50% of the missed race's stake. Lost: capture the hold or keep the charge.
+- `create-stake` checks age and place, validates the template (or the Comeback rules), the table gates and the Shields in the locker, takes what it can from the Vault in one transaction, and opens a Whop checkout for the rest. No holds: Whop charges.
+- `whop-webhook` activates the race when Whop says the payment succeeded, once per payment. A checkout closed without paying is called off by `cancel-checkout`, or by `settle` after an hour.
+- `settle` (pg_cron, every 15 min): a race is won if missed days ≤ grace days + equipped Shields. Unused Shields go back to the locker. Won: the card part is refunded through Whop and the Vault part goes back to the Vault; for a Comeback also 50% of the missed race's stake. Lost: the stake is kept.
 - `grant-shields` checks a StoreKit transaction with the App Store Server API (bundle, product, not revoked, `appAccountToken` = the account) and credits the locker once per transaction.
 - `league_board()` (SQL, RLS-safe) returns the caller's league table; `roll_leagues()` moves the top 7 up and the bottom 5 down every Sunday night.
 
