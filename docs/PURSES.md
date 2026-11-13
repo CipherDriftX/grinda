@@ -65,26 +65,27 @@ Each point is a top complaint in Steppa's App Store reviews or on Reddit.
 - `open_house_purses()` runs every Sunday from pg_cron and opens the week's 7 house purses in USD and EUR.
 - Tables for cash-outs, disputes (with a private storage bucket for screenshots), Paid to Post submissions and referrals.
 
-**Edge functions.** `join-purse` (entry credit first, then the Vault, then the card), `host-purse` (crew purses are free; public ones cost $25 unless it's a Pro member's free one this month), `cash-out`, `redeem-invite`, `submit-dispute`, `submit-post`. `stripe-webhook` records entry and fee lines and pays referrals; `settle` marks disputed days under review and calls `split_purse` when a purse is due. Shared fee maths and tests live in `_shared/common.ts`.
+**Edge functions.** `join-purse` (entry credit first, then the Vault, then Whop's checkout for the rest), `host-purse` (crew purses are free; public ones cost $25 unless it's a Pro member's free one this month), `cancel-checkout` (the person closed the checkout: called off at once), `cash-out`, `redeem-invite`, `save-profile`, `submit-dispute`, `submit-post`. `whop-webhook` makes an entry live when Whop says it's paid, freezes payouts on a card dispute and closes cash-out transfers; `settle` calls off checkouts unpaid after an hour, marks disputed days under review and calls `split_purse` when a purse is due. `admin-review` is the review desk for flagged days, screenshots and frozen accounts. Shared fee maths and tests live in `_shared/`.
 
 ## Still to do before money moves
 
-- **Server-side Pro.** The server reads `is_pro` from the database and never trusts the app, but nothing sets that flag yet. It needs App Store Server Notifications. Until then, Pro members are charged the fee on real entries.
-- **Cash-out payouts.** A cash-out is recorded as "requested". A payouts run (Stripe Connect or PayPal Payouts) or a person still has to send the money.
-- **Host fee payment.** The host fee reuses the stake payment reply shape with a placeholder race id. It works, but deserves its own type.
-- **Legal.** 18+ checks and location blocks are in the plan, not yet in the code.
+- **Whop's yes.** Whop has to accept paid skill contests for this business, in writing.
+- **Sandbox checks.** Transfer and refund fees, a EUR transfer from a USD balance, what a claim link pays in EUR, whether Apple Pay shows inside the in-app checkout sheet, and what Whop adds to the redirect URL.
+- **A lawyer's check of the region lists.** The defaults copy Steppa's rules: 18+, 19 or 21 where the age of majority is higher, and paid play blocked in AZ, AR, CT, DE, LA, MT, SC, SD and TN (Steppa hides its own list; this is the one Skillz cash-tournament apps publish). A lawyer can replace either list through `BLOCKED_REGIONS` and `AGE_RULES` without a release. The check uses the place the person declared, once; Steppa also checks the phone's location when someone joins.
+- **App Attest.** Not built. The server checks shape and plausibility of step data, and people review flags, but nothing proves a request came from the real app.
+- **Fast lane.** Finishers whose days all synced on time could be paid before the 24-hour wait; not built.
 
 ## Money in and out
 
-- Entries are paid by card through Stripe, from your Vault balance first. Apple in-app purchase is only used for Pro and Shields.
-- Winnings land in the Vault. Cash out from $25, up to $500 a day, to a bank account or PayPal. US first, then UK, EU and Canada.
-- 18+ only for paid play. Location checks block paid purses where the law requires it.
+- Entries are paid from entry credit and the Vault first, then by card on Whop's hosted checkout, opened inside the app. The entry goes live when Whop's webhook reaches the server. Apple in-app purchase is only used for Pro and Shields.
+- Winnings land in the Vault. Cash out from $5, up to $500 a day. Whop sends it to the Whop account you paid an entry with, or as a claim link if you haven't paid by card yet (USD only).
+- 18+ only for paid play: 19 in Alabama, Nebraska and the Canadian provinces and territories where the age of majority is 19, 21 in Mississippi and Puerto Rico. Not open in Arizona, Arkansas, Connecticut, Delaware, Louisiana, Montana, South Carolina, South Dakota or Tennessee. The app asks for date of birth and country (and state in the US, Canada and Australia) before the first payment, and the server blocks the regions in `BLOCKED_REGIONS`.
 
 ## Pro
 
-Steppie Pro gives you 5 races at once (free accounts get 1), no service fee, $10 of entry credit every month, one free host purse a month, the gold mane badge and the Stride S icon.
+Steppie Pro gives you 5 races at once (free accounts get 1), no fee when your balance pays and a lower card fee, one free host purse a month, the gold mane badge and the Stride S icon. The server checks Pro with Apple (`verify-pro`, `app-store-notifications`); the app's word is never enough.
 
 ## Open questions
 
-- Which US states and EU countries block paid step contests? Ask a lawyer before money moves.
-- Stripe's terms for skill contests: confirm the merchant category with Stripe before launch.
+- Is the 9-state list right for a walking contest, and does any EU country block it? Ask a lawyer before real money moves.
+- Whop's terms for skill contests in each launch country: get it in writing before launch.

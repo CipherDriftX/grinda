@@ -168,7 +168,7 @@ enum NotificationService {
             c.body = "Your first race comes with a Shield: one bad day covered. Pin a bib and it's yours to use."
         case 2:
             c.title = "Pip: your bib's half pinned 🐦"
-            c.body = "Your goal's set and Steppie's laced up. One hold on your card and you're racing. Short races are never charged if you finish."
+            c.body = "Your goal's set and Steppie's laced up. Pin a bib and you're racing. Finish, and your whole stake comes back."
         default:
             c.title = "Pip: Dash is out on the track 🐆"
             c.body = "People with money on the line hit their goal about 3 times in 4. Back yourself with \(stake) and show Dash who's faster."

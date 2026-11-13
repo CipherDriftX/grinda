@@ -1,15 +1,18 @@
 // Joins a purse. The entry plus fees come from entry credit first, then the
-// Vault, then the card. The race is live at once when balances cover it;
-// otherwise it waits for the card payment (stripe-webhook activates it).
+// Vault, then a Whop checkout for the rest. Paid from balances, the race is
+// live at once; otherwise the app opens the checkout and whop-webhook makes
+// the race live when the payment lands. An unpaid checkout is called off
+// after an hour (settle) or when the person closes it (cancel-checkout).
 import {
-  admin, consecutiveDates, handler, hostFee, HttpError, json, localToday, payReferral, requireUser, serviceFee, settleInstant,
-  stripe, STRIPE_API_VERSION, stripeCustomer,
+  admin, consecutiveDates, handler, HttpError, INVITE_BONUS, json, localToday, maxRunning, moneyError, proActive, quoteEntry, requireUser,
+  settleInstant,
 } from "../_shared/common.ts";
+import { type Declared, ensureEligible } from "../_shared/eligibility.ts";
+import { createCheckout } from "../_shared/whop.ts";
 
-type Body = {
+type Body = Declared & {
   purse_id: string;
   timezone: string;
-  birth_year?: number | null;
   shields_equipped?: number;
 };
 
@@ -30,112 +33,61 @@ Deno.serve(handler(async (req) => {
   // Open until the first day starts for this walker.
   if (purse.starts_on <= localToday(body.timezone)) throw new HttpError(409, "This purse has already started. A new one opens every week.");
 
-  const { data: profile } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  const birthYear = body.birth_year ?? profile?.birth_year;
-  if (!birthYear || new Date().getUTCFullYear() - birthYear < 18) throw new HttpError(403, "Purses are for adults 18 and over.");
-  if (purse.pro_only && !profile?.is_pro) throw new HttpError(403, "This purse is for Steppie Pro members.");
+  const { data: found } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!found) throw new HttpError(403, "Finish setting up your profile first.");
+  const profile = await ensureEligible(db, found, body, localToday(body.timezone));
+  const isPro = proActive(profile);
+  if (purse.pro_only && !isPro) throw new HttpError(403, "This purse is for Steppie Pro members.");
 
-  const isPro = !!profile?.is_pro;
-  const { count: running } = await db.from("races").select("id", { count: "exact", head: true })
-    .eq("user_id", user.id).in("status", ["active", "pendingPayment"]).not("stake_cents", "is", null);
-  if ((running ?? 0) >= (isPro ? 5 : 1)) {
-    throw new HttpError(409, isPro ? "You're running five already." : "You already have a race running. Steppie Pro lets you run up to five at once.");
+  // A checkout already open for this purse: hand back the same one, so a second
+  // tap never makes a second payment.
+  const { data: pending } = await db.from("races").select("id, bib_number, checkout_id, checkout_url")
+    .eq("purse_id", purse.id).eq("user_id", user.id).eq("status", "pendingPayment").maybeSingle();
+  if (pending?.checkout_url) {
+    return json({ race_id: pending.id, bib_number: pending.bib_number, checkout: { id: pending.checkout_id, url: pending.checkout_url } });
   }
-
-  if (purse.cap) {
-    const { count: inIt } = await db.from("races").select("id", { count: "exact", head: true })
-      .eq("purse_id", purse.id).neq("status", "cancelled");
-    if ((inIt ?? 0) >= purse.cap) throw new HttpError(409, "This purse is full.");
-  }
+  if (pending) await db.rpc("cancel_pending", { rid: pending.id }); // its checkout never got made
 
   const shields = Math.max(0, Math.min(Math.floor(body.shields_equipped ?? 0), 2));
-  if (shields > (profile?.shields ?? 0)) throw new HttpError(400, "Not enough Shields in your locker.");
-
-  const entry = purse.entry_cents as number;
-  const fee = serviceFee(entry, isPro);
-  const host = hostFee(entry, purse.kind);
-  const total = entry + fee + host;
-
-  // Balances: credit first (entry-only money), then the Vault.
-  const fromCredit = Math.min(profile?.credit_cents ?? 0, total);
-  const fromVault = Math.min(profile?.vault_cents ?? 0, total - fromCredit);
-  const fromCard = total - fromCredit - fromVault;
-  if (fromCard > 0 && fromCard < 50) throw new HttpError(400, "Add a little to your Vault first; cards need at least 50 cents.");
-
+  const q = quoteEntry(purse.entry_cents, purse.kind, isPro, profile.credit_cents ?? 0, profile.vault_cents ?? 0);
   const dates = consecutiveDates(purse.starts_on, purse.days);
-  const settlesAt = settleInstant(dates[dates.length - 1], body.timezone, 24); // late syncs always land
   const bib = 1000 + Math.floor(Math.random() * 9000);
 
-  const { data: race, error } = await db.from("races").insert({
-    user_id: user.id,
-    template_id: `purse:${purse.id}`,
-    name: purse.name,
-    daily_goal: purse.daily_goal,
-    grace_allowed: 0,
-    timezone: body.timezone,
-    start_date: dates[0],
-    end_date: dates[dates.length - 1],
-    settles_at: settlesAt.toISOString(),
-    stake_cents: entry,
-    currency: purse.currency,
-    capture_method: "automatic",
-    status: fromCard > 0 ? "pendingPayment" : "active",
-    stake_state: fromCard > 0 ? "none" : "charged",
-    bib_number: bib,
-    shields_equipped: shields,
-    purse_id: purse.id,
-    fee_cents: fee,
-    host_fee_cents: host,
-    paid_from_balance_cents: fromCredit + fromVault,
-  }).select().single();
-  if (error?.code === "23505") throw new HttpError(409, "You're already in this purse.");
-  if (error || !race) throw error ?? new Error("insert failed");
-
-  if (fromCredit + fromVault > 0) {
-    const { error: e } = await db.rpc("adjust_balance", { uid: user.id, vault_delta: -fromVault, credit_delta: -fromCredit });
-    if (e) {
-      await db.from("races").delete().eq("id", race.id);
-      throw new HttpError(409, "Your balance changed. Try again.");
-    }
-  }
-  await db.from("race_days").insert(dates.map((day) => ({ race_id: race.id, day, goal: purse.daily_goal })));
-  if (shields > 0) await db.from("profiles").update({ shields: (profile?.shields ?? 0) - shields }).eq("id", user.id);
-
-  if (fromCard === 0) {
-    await db.from("ledger_entries").insert([
-      { race_id: race.id, user_id: user.id, kind: "entry", amount_cents: entry, currency: purse.currency, stripe_ref: `bal_${race.id}` },
-      ...(fee + host > 0
-        ? [{ race_id: race.id, user_id: user.id, kind: "fee", amount_cents: fee + host, currency: purse.currency, stripe_ref: `bal_${race.id}` }]
-        : []),
-    ]);
-    await payReferral(db, user.id, purse.currency);
-    return json({ race_id: race.id, bib_number: bib, payment: null });
-  }
-
-  const customerId = await stripeCustomer(db, user.id, profile);
-  const intent = await stripe.paymentIntents.create({
-    amount: fromCard,
-    currency: purse.currency.toLowerCase(),
-    customer: customerId,
-    payment_method_types: ["card"],
-    description: `Steppie purse entry: ${purse.name} (bib ${bib})`,
-    statement_descriptor_suffix: "STEPPIE PURSE",
-    metadata: { race_id: race.id, user_id: user.id, purse_id: purse.id, kind: "purse_entry" },
-  }, { idempotencyKey: `purse-${race.id}` });
-  await db.from("races").update({ stripe_payment_intent: intent.id }).eq("id", race.id);
-  const key = await stripe.ephemeralKeys.create({ customer: customerId }, { apiVersion: STRIPE_API_VERSION });
-
-  return json({
-    race_id: race.id,
-    bib_number: bib,
-    payment: {
-      race_id: race.id,
-      bib_number: bib,
-      payment_intent_client_secret: intent.client_secret,
-      customer_id: customerId,
-      ephemeral_key: key.secret,
-      publishable_key: Deno.env.get("STRIPE_PUBLISHABLE_KEY"),
-      capture_method: "automatic",
+  const { data: raceId, error } = await db.rpc("open_race", {
+    uid: user.id,
+    spec: {
+      template_id: `purse:${purse.id}`, name: purse.name, daily_goal: purse.daily_goal, grace_allowed: 0,
+      timezone: body.timezone, days: dates,
+      settles_at: settleInstant(dates[dates.length - 1], body.timezone, 24).toISOString(), // late syncs always land
+      stake_cents: q.entry, currency: purse.currency, bib_number: bib, shields, purse_id: purse.id,
+      fee_cents: q.fee, host_fee_cents: q.host, from_credit: q.fromCredit, from_vault: q.fromVault, from_card: q.fromCard,
     },
+    max_running: maxRunning(isPro),
+    bonus: INVITE_BONUS,
   });
+  if (error) throw moneyError(error, isPro);
+
+  if (q.fromCard === 0) return json({ race_id: raceId, bib_number: bib, checkout: null });
+
+  let checkout;
+  try {
+    checkout = await createCheckout({
+      amountCents: q.fromCard,
+      currency: purse.currency,
+      title: `${purse.name} entry`,
+      description: `Bib ${bib}. Entry ${cents(q.entry)} into the purse, fee ${cents(q.fee + q.host)}` +
+        (q.fromCredit + q.fromVault > 0 ? `, ${cents(q.fromCredit + q.fromVault)} already paid from your balance.` : "."),
+      meta: { kind: "race", race_id: raceId, user_id: user.id, purse_id: purse.id },
+    });
+  } catch (e) {
+    await db.rpc("cancel_pending", { rid: raceId });
+    console.error("checkout", e);
+    throw new HttpError(502, "Card payments are down for a moment. Nothing was charged; try again soon.");
+  }
+  await db.from("races").update({ checkout_id: checkout.id, checkout_url: checkout.purchase_url }).eq("id", raceId);
+  return json({ race_id: raceId, bib_number: bib, checkout: { id: checkout.id, url: checkout.purchase_url } });
 }));
+
+function cents(c: number): string {
+  return (c / 100).toFixed(2);
+}

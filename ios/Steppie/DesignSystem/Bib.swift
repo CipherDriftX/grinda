@@ -113,7 +113,6 @@ struct BibCard: View {
     let dailyGoal: Int
     let dayLabel: String
     let stake: Money?
-    let usesHold: Bool
     var days: [DayRecord] = []
     var settles: Date? = nil
     var pinned = 4 // how many of the four pins are in (0...4)
@@ -229,7 +228,7 @@ struct BibCard: View {
             return "\(pot.formatted) PURSE · SPLIT WITH EVERY FINISHER"
         }
         guard let stake else { return "PRACTICE · NO MONEY" }
-        return usesHold ? "\(stake.formatted) HELD · NEVER CHARGED IF YOU FINISH" : "\(stake.formatted) · BACK IN FULL WHEN YOU FINISH"
+        return "\(stake.formatted) · BACK IN FULL WHEN YOU FINISH"
     }
 
     private var pins: some View {
@@ -254,14 +253,14 @@ struct BibCard: View {
 extension BibCard {
     init(race: Race, compact: Bool = false) {
         self.init(name: race.name, bibNumber: race.bibNumber, dailyGoal: race.dailyGoal, dayLabel: race.dayLabel,
-                  stake: race.stake, usesHold: race.usesHold, days: race.days, settles: race.settlesAt, compact: compact, purse: race.purse)
+                  stake: race.stake, days: race.days, settles: race.settlesAt, compact: compact, purse: race.purse)
     }
 
     init(template t: RaceTemplate, stake: Int?, bibNumber: Int = 0, pinned: Int = 4, startingToday: Bool = true) {
         let dates = AppModel.schedule(for: t, startingToday: startingToday)
         let settles = Calendar.current.date(byAdding: .hour, value: 27, to: dates.last ?? .now)
         self.init(name: t.name, bibNumber: bibNumber, dailyGoal: t.dailyGoal, dayLabel: "\(t.days) days",
-                  stake: stake.map { Money(units: $0) }, usesHold: t.usesHold,
+                  stake: stake.map { Money(units: $0) },
                   days: dates.map { DayRecord(date: $0, steps: 0, goal: t.dailyGoal, state: .upcoming) },
                   settles: settles, pinned: pinned)
     }

@@ -53,8 +53,14 @@ struct RaceDetailView: View {
             ForEach(Array(race.days.enumerated()), id: \.offset) { i, day in
                 HStack {
                     Text("Day \(i + 1)").font(.headline).frame(width: 64, alignment: .leading)
-                    Text(day.date.formatted(.dateTime.weekday(.abbreviated).day()))
-                        .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(day.date.formatted(.dateTime.weekday(.abbreviated).day()))
+                            .font(.subheadline).foregroundStyle(Palette.inkSecondary)
+                        if !race.isPractice, day.state != .upcoming, let at = day.syncedAt {
+                            Text("Synced \(at.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption2).foregroundStyle(Palette.inkSecondary)
+                        }
+                    }
                     Spacer()
                     Text(day.state == .upcoming ? "–" : day.steps.formatted())
                         .font(BrandFont.numerals(22, relativeTo: .body))
@@ -115,14 +121,14 @@ struct RaceDetailView: View {
             }
             return "Your \(stake.formatted) entry is in the purse. Finish every day and you split the whole purse with every other finisher. It settles \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour())), a day after the last day closes."
         }
-        let card = race.cardLast4.map { " on the card ending \($0)" } ?? ""
         switch race.stakeState {
-        case .held: return "\(stake.formatted) is held\(card). It has not been charged. Finish and the hold disappears."
-        case .charged: return "\(stake.formatted) was paid\(card). Finish and it's refunded in full within minutes of settling at \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour().minute()))."
+        case .held: return "\(stake.formatted) is held on your card. It has not been charged."
+        case .charged: return "\(stake.formatted) is paid. Finish and all of it comes back when the race settles, \(race.settlesAt.formatted(.dateTime.weekday(.wide).hour().minute())): the card part to your card, the Vault part to your Vault."
         case .released: return "The \(stake.formatted) hold was released. Nothing was ever charged."
         case .refunded: return "\(stake.formatted) was refunded to your card."
-        case .kept: return "\(stake.formatted) was kept for this race. Every missed stake is shown in your Wallet."
-        case .none: return ""
+        case .returned: return "\(stake.formatted) came back: card payments to your card, the rest to your Vault."
+        case .kept: return "\(stake.formatted) was kept for this race. Every missed stake is shown in your Vault."
+        case .none: return race.status == .pendingPayment ? "Waiting for your payment to land." : ""
         }
     }
 }

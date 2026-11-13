@@ -65,11 +65,6 @@ struct RaceTemplate: Identifiable, Codable, Hashable {
     /// A Comeback race: finish it and half of a recent missed stake comes back too.
     var isComeback = false
 
-    /// Stripe card authorisations last 7 days, so races that settle within
-    /// ~6 days are a hold that is released on success. Longer races are
-    /// charged and refunded automatically.
-    var usesHold: Bool { kind == .staked && days <= 5 && schedule == .consecutive }
-
     var goalLabel: String {
         dailyGoal % 1000 == 0 ? "\(dailyGoal / 1000)K" : String(format: "%.1fK", Double(dailyGoal) / 1000)
     }
@@ -112,12 +107,13 @@ enum RaceStatus: String, Codable, Hashable {
 }
 
 enum StakeState: String, Codable, Hashable {
-    case none      // practice
-    case held      // card authorised, not charged
-    case charged   // paid, refundable on success
-    case released  // hold cancelled: money never moved
-    case refunded  // charge refunded in full
-    case kept      // missed: hold captured or charge kept
+    case none      // practice, or waiting for its checkout
+    case charged   // paid (card, Vault or both), comes back on a finish
+    case refunded  // finished: the card part went back to the card
+    case returned  // finished: the stake came back (Vault part to the Vault, card part to the card)
+    case kept      // missed: the stake was kept
+    // Card holds from the first version. No new race uses them; old rows still read.
+    case held, released
 }
 
 enum DayState: String, Codable, Hashable {
@@ -129,6 +125,8 @@ struct DayRecord: Identifiable, Codable, Hashable {
     var steps: Int
     var goal: Int
     var state: DayState
+    /// When the server last took this day's steps, so a walker can see it has them.
+    var syncedAt: Date? = nil
 
     var id: Date { date }
     var progress: Double { goal > 0 ? min(Double(steps) / Double(goal), 1) : 0 }
@@ -145,8 +143,6 @@ struct Race: Identifiable, Codable, Hashable {
     var stake: Money?
     var stakeState: StakeState
     var status: RaceStatus
-    var usesHold: Bool
-    var cardLast4: String?
     var createdAt: Date
     var settledAt: Date?
     /// Steppie Shields equipped on this race (0...2). Each covers one missed day,
@@ -169,10 +165,10 @@ struct Race: Identifiable, Codable, Hashable {
     var totalSteps: Int { days.reduce(0) { $0 + $1.steps } }
     var endDate: Date { days.last?.date ?? createdAt }
 
-    /// Settlement runs 3 hours after the final day closes, to let late
-    /// watch and tracker syncs arrive.
+    /// Settlement waits for late watch and tracker syncs: 3 hours after the
+    /// final day closes for a solo race, a full day for a purse (as the server does).
     var settlesAt: Date {
-        Calendar.current.date(byAdding: .hour, value: 27, to: endDate) ?? endDate
+        Calendar.current.date(byAdding: .hour, value: purse == nil ? 27 : 48, to: endDate) ?? endDate
     }
 
     var todayIndex: Int? {
@@ -230,7 +226,7 @@ struct PurseTicket: Codable, Hashable {
 // MARK: - Wallet
 
 enum LedgerKind: String, Codable, Hashable {
-    case held, charged, released, refunded, kept, comeback
+    case held, charged, released, refunded, returned, kept, comeback
     case entry, fee, winnings, cashout, credit, referral, hostFee
 
     var title: String {
@@ -239,6 +235,7 @@ enum LedgerKind: String, Codable, Hashable {
         case .charged: "Stake paid"
         case .released: "Hold released"
         case .refunded: "Refunded"
+        case .returned: "Back in your Vault"
         case .kept: "Stake kept"
         case .comeback: "Comeback refund"
         case .entry: "Purse entry"
@@ -251,7 +248,7 @@ enum LedgerKind: String, Codable, Hashable {
         }
     }
 
-    var isReturn: Bool { [.released, .refunded, .comeback, .winnings, .referral, .hostFee, .credit].contains(self) }
+    var isReturn: Bool { [.released, .refunded, .returned, .comeback, .winnings, .referral, .hostFee, .credit].contains(self) }
 }
 
 struct LedgerEntry: Identifiable, Codable, Hashable {
@@ -260,7 +257,7 @@ struct LedgerEntry: Identifiable, Codable, Hashable {
     var raceName: String
     var kind: LedgerKind
     var amount: Money
-    var reference: String // Stripe PaymentIntent id
+    var reference: String // Whop payment (pay_...) or an internal move (bal_, ret_, split_, co_ ...)
 }
 
 // MARK: - Person
@@ -300,6 +297,15 @@ struct Profile: Codable, Hashable {
     var appleUserID: String?
     var displayName: String?
     var birthYear: Int?
+    /// yyyy-MM-dd, Gregorian. Saved on the server once; it decides the age check.
+    var birthDate: String?
+    /// ISO 3166 country ("DE") and, in the US, Canada and Australia, region ("US-AZ").
+    var country: String?
+    var region: String?
+    /// The currency the server keeps this person's money in (set on the first money move).
+    var currency: String?
+    /// False when paid races are blocked where this person lives (the server decides).
+    var paidRacesAvailable = true
     var notificationsEnabled = false
     /// Opted in to race invites (fresh starts, comebacks, new races) on top of pace nudges.
     var invitesEnabled = false
@@ -321,21 +327,43 @@ struct Profile: Codable, Hashable {
     /// Your invite code, and the code you joined with.
     var inviteCode: String?
     var invitedBy: String?
+    /// A code typed before sign-in, sent to the server right after it.
+    var pendingInvite: String?
     /// Invites that turned into a first paid entry.
     var invitesPaid = 0
 
     var isSignedIn: Bool { appleUserID != nil }
-    var isAdult: Bool {
-        guard let y = birthYear else { return false }
-        return Calendar.current.component(.year, from: .now) - y >= 18
+    var isAdult: Bool { (age ?? 0) >= 18 }
+
+    /// Whole years today, counted like the server does: with only a birth
+    /// year, assume the birthday hasn't come yet.
+    var age: Int? {
+        let now = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: .now)
+        guard let ty = now.year, let tm = now.month, let td = now.day else { return nil }
+        if let b = birthDate, b.count == 10,
+           let y = Int(b.prefix(4)), let m = Int(b.dropFirst(5).prefix(2)), let d = Int(b.suffix(2)) {
+            return ty - y - ((tm, td) < (m, d) ? 1 : 0)
+        }
+        if let y = birthYear { return ty - y - 1 }
+        return nil
     }
+
+    /// No country yet, or no state where the rules need one.
+    var needsPlace: Bool {
+        guard let c = country else { return true }
+        return Place.needsRegion.contains(c) && region == nil
+    }
+
+    /// What the server needs before the first money move.
+    var needsDetails: Bool { !isSignedIn || needsPlace || (birthDate == nil && birthYear == nil) }
 }
 
 extension Profile {
     private enum CodingKeys: String, CodingKey {
         case why, weightKg, goalWeightKg, dailyGoal, baseline, usesMetric, onboarded, appleUserID, displayName, birthYear
+        case birthDate, country, region, currency, paidRacesAvailable
         case notificationsEnabled, invitesEnabled, onboardedAt, shields, shoes, wearing, unopenedBoxes, weekGrit, league
-        case vaultCents, creditCents, inviteCode, invitedBy, invitesPaid
+        case vaultCents, creditCents, inviteCode, invitedBy, pendingInvite, invitesPaid
     }
 
     /// Tolerant decoding: fields added in later versions fall back to their
@@ -354,6 +382,11 @@ extension Profile {
         appleUserID = v(.appleUserID, appleUserID)
         displayName = v(.displayName, displayName)
         birthYear = v(.birthYear, birthYear)
+        birthDate = v(.birthDate, birthDate)
+        country = v(.country, country)
+        region = v(.region, region)
+        currency = v(.currency, currency)
+        paidRacesAvailable = v(.paidRacesAvailable, paidRacesAvailable)
         notificationsEnabled = v(.notificationsEnabled, notificationsEnabled)
         invitesEnabled = v(.invitesEnabled, invitesEnabled)
         onboardedAt = v(.onboardedAt, onboardedAt)
@@ -367,6 +400,7 @@ extension Profile {
         creditCents = v(.creditCents, creditCents)
         inviteCode = v(.inviteCode, inviteCode)
         invitedBy = v(.invitedBy, invitedBy)
+        pendingInvite = v(.pendingInvite, pendingInvite)
         invitesPaid = v(.invitesPaid, invitesPaid)
     }
 }

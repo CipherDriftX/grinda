@@ -1,14 +1,5 @@
 // Shared helpers for Steppie Edge Functions.
 import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
-import Stripe from "npm:stripe@17";
-
-export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2025-02-24.acacia",
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
-export const STRIPE_API_VERSION = "2025-02-24.acacia";
-
 export function admin(): SupabaseClient {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -30,6 +21,24 @@ export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
+}
+
+/** Turns an error from the money SQL functions into an answer a person can act on. */
+export function moneyError(e: { code?: string; message?: string }, isPro = false): Error {
+  const m = e.message ?? "";
+  if (m.includes("too_many_running")) {
+    return new HttpError(409, isPro ? "You're running five already." : "You already have a race running. Steppie Pro lets you run up to five at once.");
+  }
+  if (m.includes("purse_full")) return new HttpError(409, "This purse is full.");
+  if (m.includes("no_purse")) return new HttpError(404, "That purse isn't open.");
+  if (e.code === "23505" || m.includes("races_one_entry_per_purse")) return new HttpError(409, "You're already in this purse.");
+  if (m.includes("no_shields")) return new HttpError(400, "Not enough Shields in your locker.");
+  if (e.code === "23514" || m.includes("_cents_check")) return new HttpError(409, "Your balance changed. Try again.");
+  if (m.includes("too_many_hosted")) return new HttpError(409, "You can host three purses at a time.");
+  if (m.includes("free_month_used")) return new HttpError(409, "You've used this month's free Pro purse.");
+  if (m.includes("wrong_currency")) return new HttpError(409, "Your Steppie balance is in another currency. Pick one in your currency.");
+  if (m.includes("no_profile")) return new HttpError(403, "Finish setting up your profile first.");
+  return new Error(`money function failed: ${e.code ?? ""} ${m}`);
 }
 
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -72,11 +81,6 @@ export const TEMPLATES: Record<string, Template> = {
 /** Comebacks: five days at the missed race's goal (the goal is filled in per race). */
 export const COMEBACK: Template = { id: "comeback", name: "Comeback", dailyGoal: 0, days: 5, graceDays: 0, schedule: "consecutive", staked: true };
 
-/** Holds (manual capture) only when the race settles well inside Stripe's 7-day authorisation window. */
-export function usesHold(t: Template): boolean {
-  return t.staked && t.schedule === "consecutive" && t.days <= 5;
-}
-
 /** Calendar dates (YYYY-MM-DD) the race runs on, starting at `start`. */
 export function scheduleDates(t: Template, start: string): string[] {
   const out: string[] = [];
@@ -106,17 +110,101 @@ export function settleInstant(date: string, tz: string, graceHours = 3): Date {
 // Purses ---------------------------------------------------------------------------
 // Same numbers as PurseFee in the app. The fee is on top of the entry; the entry
 // itself goes whole into the purse.
-export const PURSE_FLAT_FEE = 50;
-export const PURSE_FEE_RATE = 0.04;
+//
+// A card entry costs Steppie a card payment (Whop: 2.7% + $0.30 for US cards),
+// money already in the Vault costs nothing to move. So the fee follows the
+// money: cheaper when the balance pays, higher when a card does.
+export type Funding = "balance" | "card";
+export const FEES: Record<Funding, { flat: number; rate: number }> = {
+  balance: { flat: 50, rate: 0.04 },
+  card: { flat: 99, rate: 0.05 },
+};
+/** Pro: no fee from the balance; card entries pay only what the card costs. */
+export const PRO_FEES: Record<Funding, { flat: number; rate: number }> = {
+  balance: { flat: 0, rate: 0 },
+  card: { flat: 49, rate: 0.03 },
+};
 export const HOST_RATE = 0.05;
 export const HOST_CREATE_CENTS = 2500;
-export const CASHOUT_MIN = 2500;
+export const CARD_MIN = 50;          // the smallest card charge
+export const CASHOUT_MIN = 500;      // a 5 stake that comes back can always be cashed out
 export const CASHOUT_DAILY = 50000;
 export const INVITE_CREDIT = 500;
 export const INVITE_BONUS = 500;
+/** Pro counts only while the paid period (grace included) runs; see verify-pro. */
+export function proActive(p: { is_pro?: boolean | null; pro_expires_at?: string | null } | null, now = Date.now()): boolean {
+  return !!p?.is_pro && !!p.pro_expires_at && new Date(p.pro_expires_at).getTime() > now;
+}
 
-export function serviceFee(entryCents: number, isPro: boolean): number {
-  return isPro ? 0 : PURSE_FLAT_FEE + Math.round(entryCents * PURSE_FEE_RATE);
+/** Races (solo stakes and purse entries) one person can have running at once. */
+export function maxRunning(isPro: boolean): number {
+  return isPro ? 5 : 1;
+}
+/** A card checkout left unpaid this long is called off and its balances go back. */
+export const CHECKOUT_TTL_MS = 60 * 60_000;
+
+export function serviceFee(entryCents: number, isPro: boolean, funding: Funding): number {
+  const f = (isPro ? PRO_FEES : FEES)[funding];
+  return f.flat + Math.round(entryCents * f.rate);
+}
+
+export type EntryQuote = {
+  entry: number; fee: number; host: number; total: number;
+  fromCredit: number; fromVault: number; fromCard: number; funding: Funding;
+};
+
+/**
+ * What joining costs and who pays: entry credit first, then the Vault, then a
+ * card. When the balances cover everything at the balance price, no card is
+ * needed and the lower fee applies. A card never charges less than CARD_MIN,
+ * so a tiny card remainder takes a little less from the balances instead.
+ */
+export function quoteEntry(entryCents: number, kind: string, isPro: boolean, creditCents: number, vaultCents: number): EntryQuote {
+  const host = hostFee(entryCents, kind);
+  const credit = Math.max(0, creditCents);
+  const vault = Math.max(0, vaultCents);
+  const balanceFee = serviceFee(entryCents, isPro, "balance");
+  const balanceTotal = entryCents + balanceFee + host;
+  if (credit + vault >= balanceTotal) {
+    const fromCredit = Math.min(credit, balanceTotal);
+    return { entry: entryCents, fee: balanceFee, host, total: balanceTotal, fromCredit, fromVault: balanceTotal - fromCredit, fromCard: 0, funding: "balance" };
+  }
+  const fee = serviceFee(entryCents, isPro, "card");
+  const total = entryCents + fee + host;
+  let fromCredit = Math.min(credit, total);
+  let fromVault = Math.min(vault, total - fromCredit);
+  let fromCard = total - fromCredit - fromVault;
+  if (fromCard < CARD_MIN) {
+    const short = CARD_MIN - fromCard;
+    const lessVault = Math.min(short, fromVault);
+    fromVault -= lessVault;
+    fromCredit -= short - lessVault;
+    fromCard = CARD_MIN;
+  }
+  return { entry: entryCents, fee, host, total, fromCredit, fromVault, fromCard, funding: "card" };
+}
+
+/**
+ * Solo stakes: no fee (Steppie keeps missed stakes). The Vault pays first, a
+ * card the rest. Entry credit never pays a stake, because a finished stake
+ * comes back as Vault money and credit must not turn into cash.
+ */
+export function quoteStake(stakeCents: number, vaultCents: number): { fromVault: number; fromCard: number } {
+  let fromVault = Math.min(Math.max(0, vaultCents), stakeCents);
+  let fromCard = stakeCents - fromVault;
+  if (fromCard > 0 && fromCard < CARD_MIN) {
+    fromVault -= CARD_MIN - fromCard;
+    fromCard = CARD_MIN;
+  }
+  return { fromVault, fromCard };
+}
+
+/** A money-moving race may start today or tomorrow in the walker's zone, never in the past. */
+export function startAllowed(start: string, tz: string, now = new Date()): boolean {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const t = new Date(`${today}T12:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + 1);
+  return start === today || start === t.toISOString().slice(0, 10);
 }
 
 export function hostFee(entryCents: number, kind: string): number {
@@ -145,30 +233,8 @@ export function windowSteps(hourly: number[], start: number | null, end: number 
   return hourly.slice(start, end).reduce((a, b) => a + b, 0);
 }
 
-/** A Stripe customer and an ephemeral key, for PaymentSheet. */
-// deno-lint-ignore no-explicit-any
-export async function stripeCustomer(db: SupabaseClient, userId: string, profile: any): Promise<string> {
-  let customerId = profile?.stripe_customer_id as string | undefined;
-  if (!customerId) {
-    const customer = await stripe.customers.create({ metadata: { user_id: userId } });
-    customerId = customer.id;
-    await db.from("profiles").update({ stripe_customer_id: customerId }).eq("id", userId);
-  }
-  return customerId;
-}
-
-/** First paid purse entry: the friend who invited you gets their bonus. */
+/** First paid purse entry: the friend who invited you gets their bonus, once (atomic in SQL). */
 export async function payReferral(db: SupabaseClient, userId: string, currency: string) {
-  const { data: ref } = await db.from("referrals").select("*").eq("invitee_id", userId).is("bonus_paid_at", null).maybeSingle();
-  if (!ref) return;
-  const { data: claimed } = await db.from("referrals").update({ bonus_paid_at: new Date().toISOString() })
-    .eq("invitee_id", userId).is("bonus_paid_at", null).select();
-  if (!claimed?.length) return; // someone else got there first
-  await db.rpc("adjust_balance", { uid: ref.inviter_id, vault_delta: INVITE_BONUS, credit_delta: 0 });
-  const { data: inviter } = await db.from("profiles").select("invites_paid").eq("id", ref.inviter_id).maybeSingle();
-  await db.from("profiles").update({ invites_paid: (inviter?.invites_paid ?? 0) + 1 }).eq("id", ref.inviter_id);
-  await db.from("ledger_entries").insert({
-    race_id: null, user_id: ref.inviter_id, kind: "referral", amount_cents: INVITE_BONUS, currency,
-    stripe_ref: `ref_${userId}`, label: "Friend joined a purse",
-  });
+  const { error } = await db.rpc("pay_referral", { invitee: userId, bonus: INVITE_BONUS, cur: currency });
+  if (error) console.error("pay_referral", userId, error.message);
 }

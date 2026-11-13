@@ -171,10 +171,8 @@ struct ContractView: View {
             DealLine(symbol: "figure.walk", text: "Walk \(template.dailyGoal.formatted()) steps a day on \(dates.count) days, \(rangeText).")
             if isPractice {
                 DealLine(symbol: "sparkles", text: "No money involved. Finish to see what a staked race feels like.")
-            } else if template.usesHold {
-                DealLine(symbol: "lock.shield", text: "We place a \(money.formatted) hold on your card. Finish, and the hold is released. Nothing is ever charged.")
             } else {
-                DealLine(symbol: "arrow.uturn.backward.circle", text: "You pay \(money.formatted) now. Finish, and it's refunded in full, automatically, within minutes of settling.")
+                DealLine(symbol: "arrow.uturn.backward.circle", text: "You pay \(money.formatted) now, from your Vault first, then by card. Finish, and all of it comes back automatically when the race settles. No fee.")
             }
             if template.graceDays > 0 {
                 DealLine(symbol: "bandage", text: "\(template.graceDays) grace day\(template.graceDays > 1 ? "s" : "") included. Life happens.")
@@ -227,7 +225,7 @@ struct ContractView: View {
                 }
                 .id(attempt)
             }
-            Text(isPractice ? "You can leave a practice lap any time." : "Pinning means you agree to the Race Rules. Payment is handled by Stripe.")
+            Text(isPractice ? "You can leave a practice lap any time." : "Pinning means you agree to the Race Rules. Card payments are handled by Whop.")
                 .font(.caption)
                 .foregroundStyle(Palette.inkSecondary)
                 .multilineTextAlignment(.center)

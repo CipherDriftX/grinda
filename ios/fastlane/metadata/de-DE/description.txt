@@ -1,17 +1,17 @@
-Lauf es weg. Behalte dein Geld.
+Lass dich fürs Gehen bezahlen.
 
-Steppie macht aus deinem täglichen Schrittziel ein Versprechen mit echtem Einsatz. Wähle ein Rennen, zum Beispiel 8.000 Schritte am Tag für 5 Tage, und setze einen Betrag. Schaffst du es, bekommst du jeden Cent zurück.
+Tritt einem Topf bei, schaff jeden Tag deine Schritte und teil den Topf mit allen, die es schaffen. Oder tritt gegen dich selbst an: Setz einen Betrag, geh los und hol dir jeden Cent zurück, wenn du durchhältst.
 
-NUR RESERVIERT, NICHT ABGEBUCHT
-Bei Rennen bis 5 Tage wird dein Betrag nur auf der Karte reserviert. Schaffst du es, wird die Reservierung aufgehoben. Es wird nie etwas abgebucht.
+TÖPFE
+Wähle einen Topf, zum Beispiel 10.000 Schritte am Tag für 7 Tage, mit einem Einsatz von 5 bis 250 €. Schaffst du jeden Tag, teilst du 100 % des Topfs mit allen anderen, die es schaffen. Verpasst du einen Tag, bleibt dein Einsatz für sie im Topf. Gebühr und möglichen Anteil siehst du vorher. Schafft es niemand, bekommt jeder seinen Einsatz zurück.
 
-GELD ZURÜCK IN MINUTEN
-Längere Rennen werden nach der Abrechnung automatisch und vollständig erstattet.
+SOLO-RENNEN
+Setz 5 bis 500 €. Schaffst du es, kommt alles zurück: der Kartenteil auf die Karte, der Vault-Teil in deinen Vault.
 
 JEDER CENT SICHTBAR
-Dein Wallet zeigt jede Reservierung, Zahlung, Freigabe und Erstattung mit Stripe-Referenz.
+Dein Vault zeigt jeden Einsatz, Gewinn, jede Erstattung und Auszahlung. Auszahlung ab 5 €, bis 500 € am Tag, über Whop. Kartenzahlungen laufen über Whop; Steppie sieht deine Kartennummer nie.
 
 FUNKTIONIERT MIT DEINEM TRACKER
 Steppie liest Schritte aus Apple Health: iPhone, Apple Watch, Garmin, Fitbit, Oura, Withings und Samsung zählen. Manuell eingetragene Schritte zählen nicht.
 
-Rennen mit Einsatz ab 18 Jahren. Steppie ist kein medizinischer Rat.
+Rennen mit Geld ab 18 Jahren und nur, wo es erlaubt ist. Ob du gewinnst, hängt nur von deinen Schritten ab. Steppie ist kein medizinischer Rat.

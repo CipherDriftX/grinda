@@ -102,6 +102,9 @@ struct Purse: Identifiable, Codable, Hashable {
     var sponsorCents = 0
     var hostName: String? = nil
     var code: String? = nil
+    /// A link that opens this purse in the app (site/p.html hands over to
+    /// steppie://p/CODE). The site must be served at steppie.app.
+    var shareURL: URL? { code.flatMap { URL(string: "https://steppie.app/p.html?c=\($0)") } }
     var cap: Int? = nil
     var proOnly = false
     /// People removed from this purse for fake steps (no names, ever).
@@ -167,21 +170,70 @@ struct Purse: Identifiable, Codable, Hashable {
 
 /// The fee on top of every purse entry. It's how Steppie earns from purses:
 /// win or lose, the same small amount, shown before you pin.
+/// Same numbers as the server (supabase/functions/_shared/common.ts). The fee
+/// is on top of the entry; the entry goes whole into the purse. A card costs
+/// Steppie a card payment and Vault money costs nothing to move, so the fee is
+/// lower when the balance pays.
 enum PurseFee {
-    static let flatCents = 50
-    static let percent = 0.04
-    static let hostPercent = 0.05
+    enum Funding { case balance, card }
 
-    static func serviceCents(entryCents: Int, isPro: Bool) -> Int {
-        isPro ? 0 : flatCents + Int((Double(entryCents) * percent).rounded())
+    struct Rate { let flatCents: Int; let percent: Double }
+
+    static func rate(_ funding: Funding, isPro: Bool) -> Rate {
+        switch (funding, isPro) {
+        case (.balance, false): Rate(flatCents: 50, percent: 0.04)
+        case (.card, false): Rate(flatCents: 99, percent: 0.05)
+        case (.balance, true): Rate(flatCents: 0, percent: 0)
+        case (.card, true): Rate(flatCents: 49, percent: 0.03)
+        }
+    }
+
+    static let hostPercent = 0.05
+    static let cardMinimumCents = 50
+
+    static func serviceCents(entryCents: Int, isPro: Bool, funding: Funding) -> Int {
+        let r = rate(funding, isPro: isPro)
+        return r.flatCents + Int((Double(entryCents) * r.percent).rounded())
     }
 
     static func hostCents(entryCents: Int, kind: PurseKind) -> Int {
         kind == .host ? Int((Double(entryCents) * hostPercent).rounded()) : 0
     }
 
-    static func total(for purse: Purse, isPro: Bool) -> Int {
-        serviceCents(entryCents: purse.entryUnits * 100, isPro: isPro) + hostCents(entryCents: purse.entryUnits * 100, kind: purse.kind)
+    struct Quote {
+        let entry: Int, fee: Int, host: Int
+        let fromCredit: Int, fromVault: Int, fromCard: Int
+        let funding: Funding
+        var total: Int { entry + fee + host }
+        var fees: Int { fee + host }
+        var fromBalance: Int { fromCredit + fromVault }
+    }
+
+    /// Entry credit first, then the Vault, then a card. When the balances cover
+    /// it all at the balance price, no card is needed and the lower fee applies.
+    static func quote(entryCents: Int, kind: PurseKind, isPro: Bool, creditCents: Int, vaultCents: Int) -> Quote {
+        let host = hostCents(entryCents: entryCents, kind: kind)
+        let credit = max(0, creditCents), vault = max(0, vaultCents)
+        let balanceFee = serviceCents(entryCents: entryCents, isPro: isPro, funding: .balance)
+        let balanceTotal = entryCents + balanceFee + host
+        if credit + vault >= balanceTotal {
+            let fromCredit = min(credit, balanceTotal)
+            return Quote(entry: entryCents, fee: balanceFee, host: host, fromCredit: fromCredit,
+                         fromVault: balanceTotal - fromCredit, fromCard: 0, funding: .balance)
+        }
+        let fee = serviceCents(entryCents: entryCents, isPro: isPro, funding: .card)
+        let total = entryCents + fee + host
+        var fromCredit = min(credit, total)
+        var fromVault = min(vault, total - fromCredit)
+        var fromCard = total - fromCredit - fromVault
+        if fromCard < cardMinimumCents {
+            let short = cardMinimumCents - fromCard
+            let lessVault = min(short, fromVault)
+            fromVault -= lessVault
+            fromCredit -= short - lessVault
+            fromCard = cardMinimumCents
+        }
+        return Quote(entry: entryCents, fee: fee, host: host, fromCredit: fromCredit, fromVault: fromVault, fromCard: fromCard, funding: .card)
     }
 
     /// Hosting a public purse costs this, or is free once a month with Pro.
@@ -278,16 +330,24 @@ enum Invite {
 // MARK: - Cash out
 
 enum CashOut {
-    static let minimumCents = 2_500
+    static let minimumCents = 500   // a returned 5 stake can always be cashed out
     static let dailyLimitCents = 50_000
 
-    enum Method: String, CaseIterable, Identifiable {
-        case bank, paypal
+    /// How Whop pays it. The server picks: a transfer to the Whop account you
+    /// paid an entry with, or a claim link when there isn't one yet (USD only).
+    enum Method: String, Hashable {
+        case whop
+        case claimLink = "claim_link"
+    }
 
-        var id: String { rawValue }
-        var title: String { self == .bank ? "Bank account" : "PayPal" }
-        var symbol: String { self == .bank ? "building.columns.fill" : "envelope.fill" }
-        var timing: String { self == .bank ? "1 to 3 business days" : "Usually within a day" }
+    /// A cash-out the server accepted. The Vault is already debited.
+    struct Receipt: Hashable {
+        let amount: Money
+        let method: Method
+        let claimURL: URL?
+        let claimExpiresAt: Date?
+        /// Whop didn't answer yet; the server keeps trying for about a day.
+        let delayed: Bool
     }
 }
 

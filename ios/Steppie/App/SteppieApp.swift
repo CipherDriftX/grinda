@@ -18,7 +18,7 @@ struct SteppieApp: App {
             RootView(launchScreen: launchScreen)
                 .environment(model)
                 .task { await model.bootstrap() }
-                .onOpenURL { _ in } // Stripe redirect return
+                .onOpenURL { url in Task { await model.open(url) } }
         }
     }
 }

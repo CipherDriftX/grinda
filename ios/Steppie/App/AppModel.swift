@@ -93,7 +93,8 @@ final class AppModel {
         ledger.filter { $0.kind == .kept }.map(\.amount).reduce(Money.zero(currency)) { $0 + $1 }
     }
 
-    var currency: String { Money.localCurrency }
+    /// The server's currency for this person once money has moved; the phone's before that.
+    var currency: String { profile.currency ?? Money.localCurrency }
 
     // MARK: Purses
 
@@ -198,12 +199,36 @@ final class AppModel {
         askForRating = true
     }
 
+    // MARK: Pro
+
+    /// The account id, sent with App Store purchases as appAccountToken so
+    /// the server can tie a subscription or Shields to this account.
+    var accountToken: UUID? { api.session.flatMap { UUID(uuidString: $0.userID) } }
+
+    /// Pro as the server has it after asking Apple; that's what fees and race
+    /// limits use. Offline or before sign-in, the phone's StoreKit entitlement
+    /// shows it until the server answers.
+    func checkPro(transaction: StoreKit.Transaction? = nil) async {
+        guard !isDemo else { return }
+        let local: StoreKit.Transaction?
+        if let transaction { local = transaction } else { local = await StoreService.proTransaction() }
+        guard api.isConfigured, api.session != nil else { isPro = local != nil; return }
+        do {
+            isPro = try await api.verifyPro(transactionID: local?.id).isPro
+        } catch APIClient.APIError.server(let message) where local != nil {
+            // Apple's answer was no, or the subscription belongs to another Steppie account.
+            isPro = false
+            lastError = message
+        } catch {
+            isPro = local != nil
+        }
+    }
+
     // MARK: Shields
 
     func buyShields(_ product: StoreKit.Product) async {
         do {
-            let account = api.session.flatMap { UUID(uuidString: $0.userID) }
-            guard let t = try await StoreService.buy(product, account: account) else { return }
+            guard let t = try await StoreService.buy(product, account: accountToken) else { return }
             await credit(t)
             await t.finish()
             Haptics.success()
@@ -313,26 +338,19 @@ final class AppModel {
     }
 
     func bootstrap() async {
-        if profile.inviteCode == nil {
+        // A real code comes from the server (made at sign-up); only the demo makes one up.
+        if isDemo, profile.inviteCode == nil {
             profile.inviteCode = Invite.makeCode(name: profile.displayName)
-            persist()
         }
         if !isDemo {
-            store.start(onChange: { [weak self] pro in self?.isPro = pro },
+            store.start(onChange: { [weak self] in await self?.checkPro() },
                         onShields: { [weak self] t in await self?.credit(t) })
             health.observeSteps { [weak self] in Task { await self?.refresh() } }
         }
         await refresh()
         if !isDemo, api.isConfigured {
             publicStats = try? await api.publicStats()
-            if let me = try? await api.me() {
-                profile.shields = me.shields
-                profile.league = League(rawValue: me.league) ?? profile.league
-                profile.vaultCents = me.vaultCents ?? profile.vaultCents
-                profile.creditCents = me.creditCents ?? profile.creditCents
-                profile.inviteCode = me.inviteCode ?? profile.inviteCode
-                persist()
-            }
+            await refreshMe()
         }
         await loadPurses()
     }
@@ -438,16 +456,32 @@ final class AppModel {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// Sends day totals + hourly buckets for server-side verification and settlement.
+    /// Sends day totals + hourly buckets for server-side checks and settlement.
     private func syncRaces() async {
         guard api.isConfigured, api.session != nil else { return }
         let fmt = Self.dayFormatter
-        for race in races where race.status == .active && !race.isPractice {
-            let days = race.days.filter { $0.date <= .now }.map { day -> APIClient.DaySubmission in
-                let hourly = Calendar.current.isDateInToday(day.date) ? todayHourly : []
-                return .init(date: fmt.string(from: day.date), steps: day.steps, hourly: hourly)
+        let live = races.filter { $0.status == .active && !$0.isPractice }
+        // Hourly buckets for today and yesterday: windowed purses count only the
+        // steps inside their hours, and a watch often syncs yesterday's last hours late.
+        var recent: [String: (total: Int, hourly: [Int])] = [:]
+        if !live.isEmpty {
+            let cal = Calendar.current
+            for offset in [0, -1] {
+                guard let d = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: .now)) else { continue }
+                if let s = try? await health.steps(on: d) { recent[fmt.string(from: d)] = s }
             }
-            try? await api.submitSteps(.init(raceId: race.id, days: days, attestation: nil))
+        }
+        for race in live {
+            let days = race.days.filter { $0.date <= .now }.map { day -> APIClient.DaySubmission in
+                let key = fmt.string(from: day.date)
+                if let s = recent[key] { return .init(date: key, steps: max(s.total, day.steps), hourly: s.hourly) }
+                return .init(date: key, steps: day.steps, hourly: [])
+            }
+            guard let synced = try? await api.submitSteps(.init(raceId: race.id, days: days)), !synced.isEmpty,
+                  let i = races.firstIndex(where: { $0.id == race.id }) else { continue }
+            for j in races[i].days.indices {
+                if let at = synced[fmt.string(from: races[i].days[j].date)] { races[i].days[j].syncedAt = at }
+            }
         }
         if let remote = try? await api.races() {
             for r in remote {
@@ -463,12 +497,18 @@ final class AppModel {
                 if wasLive && races[i].status == .won { finished(races[i]) }
             }
         }
-        if let remote = try? await api.ledger() {
-            ledger = remote.map {
-                LedgerEntry(id: $0.id, date: $0.createdAt, raceName: $0.raceName,
-                            kind: LedgerKind(rawValue: $0.kind) ?? .held,
-                            amount: Money(cents: $0.amountCents, currency: $0.currency), reference: $0.stripeRef)
-            }
+        await refreshLedger()
+        persist()
+    }
+
+    /// The Vault history as the server wrote it.
+    func refreshLedger() async {
+        guard !isDemo, api.isConfigured, api.session != nil, let remote = try? await api.ledger() else { return }
+        // Every kind the server writes is a LedgerKind; skipping an unknown one beats mislabeling money.
+        ledger = remote.compactMap { r in
+            guard let kind = LedgerKind(rawValue: r.kind) else { return nil }
+            return LedgerEntry(id: r.id, date: r.createdAt, raceName: r.raceName, kind: kind,
+                               amount: Money(cents: r.amountCents, currency: r.currency), reference: r.ref ?? "")
         }
         persist()
     }
@@ -495,17 +535,17 @@ final class AppModel {
     // MARK: Entering races
 
     enum EnterError: LocalizedError {
-        case needsSignIn, underage, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, overDailyLimit, badCode, badLink
+        case needsSignIn, underage, notAvailableHere, healthMissing, alreadyRunning, purseClosed, notEnoughToCashOut, badCode, badLink
 
         var errorDescription: String? {
             switch self {
-            case .needsSignIn: "Sign in with Apple to put money on a race."
+            case .needsSignIn: "Sign in with Apple and tell us your date of birth and where you live to put money on a race."
             case .underage: "Staked races are for adults 18 and over. Practice laps are open to everyone."
+            case .notAvailableHere: "Paid races aren't open to you where you live: the place blocks them, or its minimum age is above yours. Free races and your Vault still work."
             case .healthMissing: "Connect Apple Health first so your steps count."
             case .alreadyRunning: "You already have a race running. Steppie Pro lets you run up to five at once."
             case .purseClosed: "This purse has already started. A new one opens every week."
             case .notEnoughToCashOut: "You can cash out from \(Money(cents: CashOut.minimumCents, currency: Money.localCurrency).formatted)."
-            case .overDailyLimit: "Cash-outs are limited to \(Money(cents: CashOut.dailyLimitCents, currency: Money.localCurrency).formatted) a day."
             case .badCode: "That code doesn't look right. Codes look like SAM-4821."
             case .badLink: "That link doesn't look right. Paste the full link to your post."
             }
@@ -515,10 +555,7 @@ final class AppModel {
     func canEnter(_ t: RaceTemplate) -> EnterError? {
         if !healthConnected { return .healthMissing }
         if t.kind == .staked && liveRaces.filter({ !$0.isPractice }).count >= raceLimit { return .alreadyRunning }
-        if t.kind == .staked {
-            if !profile.isSignedIn && !isDemo { return .needsSignIn }
-            if !profile.isAdult && !isDemo { return .underage }
-        }
+        if t.kind == .staked, !isDemo, let e = moneyGate() { return e }
         return nil
     }
 
@@ -533,8 +570,8 @@ final class AppModel {
         return out
     }
 
-    /// Creates the race, takes payment (or a hold) and activates it.
-    /// Returns false if the person cancelled the payment sheet.
+    /// Creates the race and takes the stake: Vault first, then Whop's checkout
+    /// for the rest. Returns false if the person closed the checkout.
     @discardableResult
     func enter(_ t: RaceTemplate, stake units: Int?, startingToday: Bool, shields: Int = 0, comebackOf: UUID? = nil) async throws -> Bool {
         if let e = canEnter(t) { throw e }
@@ -545,9 +582,9 @@ final class AppModel {
             bibNumber: Int.random(in: 1_000...9_999),
             days: dates.map { DayRecord(date: $0, steps: 0, goal: t.dailyGoal, state: .upcoming) },
             graceAllowed: t.graceDays, stake: stake,
-            stakeState: stake == nil ? .none : (t.usesHold ? .held : .charged),
+            stakeState: stake == nil ? .none : .charged,
             status: stake == nil ? .active : .pendingPayment,
-            usesHold: t.usesHold, cardLast4: nil, createdAt: .now, settledAt: nil,
+            createdAt: .now, settledAt: nil,
             shieldsEquipped: stake == nil ? 0 : min(shields, profile.shields, 2), comebackOf: comebackOf
         )
 
@@ -555,24 +592,31 @@ final class AppModel {
             let reply = try await api.createStake(.init(
                 templateId: t.id, stakeCents: stake.cents, currency: stake.currency,
                 timezone: TimeZone.current.identifier, startDate: Self.dayFormatter.string(from: dates[0]),
-                birthYear: profile.birthYear, shieldsEquipped: race.shieldsEquipped, comebackOf: comebackOf
+                birthYear: profile.birthYear, birthDate: profile.birthDate, country: profile.country, region: profile.region,
+                shieldsEquipped: race.shieldsEquipped, comebackOf: comebackOf
             ))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
-            guard try await payments.pay(reply, currency: stake.currency) == .paid else { return false }
             race.status = .active
+            if let checkout = reply.checkout {
+                switch try await pay(checkout, race: reply.raceId) {
+                case .cancelled: return false
+                case .live: break
+                case .waiting: race.status = .pendingPayment
+                }
+            }
         } else if let stake {
             try await Task.sleep(for: .milliseconds(900))
             race.status = .active
-            race.cardLast4 = "4242"
-            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: t.name, kind: t.usesHold ? .held : .charged,
-                                      amount: stake, reference: "pi_demo_\(race.bibNumber)"), at: 0)
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: t.name, kind: .charged,
+                                      amount: stake, reference: "pay_demo_\(race.bibNumber)"), at: 0)
         }
 
         profile.shields -= race.shieldsEquipped
         races.insert(race, at: 0)
         reconcileRaces()
         writeWidget()
+        await refreshMe()
         return true
     }
 
@@ -582,21 +626,27 @@ final class AppModel {
         if !p.isOpen { return .purseClosed }
         if !healthConnected { return .healthMissing }
         if liveRaces.filter({ !$0.isPractice }).count >= raceLimit { return .alreadyRunning }
-        if !profile.isSignedIn && !isDemo { return .needsSignIn }
-        if !profile.isAdult && !isDemo { return .underage }
+        if !isDemo, let e = moneyGate() { return e }
         return nil
     }
 
-    /// What joining costs right now: entry plus fees, and how much the Vault covers.
-    func joinQuote(_ p: Purse) -> (entry: Int, fee: Int, fromVault: Int, fromCard: Int) {
-        let entry = p.entryUnits * 100
-        let fee = PurseFee.total(for: p, isPro: isPro)
-        let fromVault = min(profile.creditCents + profile.vaultCents, entry + fee)
-        return (entry, fee, fromVault, entry + fee - fromVault)
+    /// What stops this person putting money in, as far as the phone knows.
+    /// The server checks again with its own region and age rules.
+    func moneyGate() -> EnterError? {
+        if profile.needsDetails { return .needsSignIn }
+        if !profile.isAdult { return .underage }
+        if !profile.paidRacesAvailable { return .notAvailableHere }
+        return nil
     }
 
-    /// Joins a purse: pays from the Vault first, then the card. Returns false if
-    /// the person closed the payment sheet.
+    /// What joining costs right now and who pays: credit, then the Vault, then a card.
+    func joinQuote(_ p: Purse) -> PurseFee.Quote {
+        PurseFee.quote(entryCents: p.entryUnits * 100, kind: p.kind, isPro: isPro,
+                       creditCents: profile.creditCents, vaultCents: profile.vaultCents)
+    }
+
+    /// Joins a purse: pays from entry credit, then the Vault, then Whop's
+    /// checkout. Returns false if the person closed the checkout.
     @discardableResult
     func join(_ p: Purse, shields: Int) async throws -> Bool {
         if let e = canJoin(p) { throw e }
@@ -607,36 +657,37 @@ final class AppModel {
             bibNumber: Int.random(in: 1_000...9_999),
             days: dates.map { DayRecord(date: $0, steps: 0, goal: p.dailyGoal, state: .upcoming) },
             graceAllowed: 0, stake: p.entry, stakeState: .charged, status: .pendingPayment,
-            usesHold: false, cardLast4: nil, createdAt: .now, settledAt: nil,
+            createdAt: .now, settledAt: nil,
             shieldsEquipped: min(shields, profile.shields, 2),
-            purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + q.entry, feeCents: q.fee, window: p.window)
+            purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + q.entry, feeCents: q.fees, window: p.window)
         )
 
         if !isDemo {
             let reply = try await api.joinPurse(.init(purseId: p.id, timezone: TimeZone.current.identifier,
-                                                      birthYear: profile.birthYear, shieldsEquipped: race.shieldsEquipped))
+                                                      birthYear: profile.birthYear, birthDate: profile.birthDate,
+                                                      country: profile.country, region: profile.region,
+                                                      shieldsEquipped: race.shieldsEquipped))
             race.id = reply.raceId
             race.bibNumber = reply.bibNumber
-            if let pay = reply.payment {
-                guard try await payments.pay(pay, currency: p.currency, label: "Pay entry") == .paid else { return false }
-            }
-            if let me = try? await api.me() {
-                profile.vaultCents = me.vaultCents ?? profile.vaultCents
-                profile.creditCents = me.creditCents ?? profile.creditCents
+            race.status = .active
+            if let checkout = reply.checkout {
+                switch try await pay(checkout, race: reply.raceId) {
+                case .cancelled: return false
+                case .live: break
+                case .waiting: race.status = .pendingPayment
+                }
             }
         } else {
+            race.status = .active
             try await Task.sleep(for: .milliseconds(700))
-            race.cardLast4 = q.fromCard > 0 ? "4242" : nil
-            let fromCredit = min(profile.creditCents, q.entry + q.fee)
-            profile.creditCents -= fromCredit
-            profile.vaultCents -= min(profile.vaultCents, q.fromVault - fromCredit)
-            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .entry, amount: p.entry, reference: "pe_demo_\(race.bibNumber)"), at: 0)
-            if q.fee > 0 {
-                ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .fee, amount: Money(cents: q.fee, currency: p.currency), reference: "fee_demo_\(race.bibNumber)"), at: 0)
+            profile.creditCents -= q.fromCredit
+            profile.vaultCents -= q.fromVault
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .entry, amount: p.entry, reference: "pay_demo_\(race.bibNumber)"), at: 0)
+            if q.fees > 0 {
+                ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: p.name, kind: .fee, amount: Money(cents: q.fees, currency: p.currency), reference: "fee_demo_\(race.bibNumber)"), at: 0)
             }
         }
 
-        race.status = .active
         profile.shields -= race.shieldsEquipped
         races.insert(race, at: 0)
         if let i = purses.firstIndex(where: { $0.id == p.id }) {
@@ -646,7 +697,91 @@ final class AppModel {
         }
         reconcileRaces()
         writeWidget()
+        await refreshMe()
         return true
+    }
+
+    // MARK: Payments
+
+    enum PaymentResult { case live, waiting, cancelled }
+
+    /// Opens Whop's checkout for a race, then asks the server until Whop's
+    /// webhook has made it live. Closed without paying, the race is called off
+    /// at once so the Vault part and Shields come back.
+    private func pay(_ checkout: APIClient.Checkout, race id: UUID) async throws -> PaymentResult {
+        guard let url = URL(string: checkout.url) else { throw APIClient.APIError.server("That checkout link is broken. Try again.") }
+        let paid = try await payments.open(url)
+        for wait in paid ? [1, 1, 1, 2, 2, 3, 3] : [1, 2] {
+            if (try? await api.raceStatus(id)) == "active" { return .live }
+            try? await Task.sleep(for: .seconds(wait))
+        }
+        if (try? await api.raceStatus(id)) == "active" { return .live }
+        // Paid, but the webhook is slow: the race shows as waiting and the next sync picks it up.
+        if paid { return .waiting }
+        if (try? await api.cancelCheckout(raceID: id)) == false, (try? await api.raceStatus(id)) == "active" { return .live }
+        return .cancelled
+    }
+
+    /// The host fee for a public purse. It's listed when Whop's webhook lands.
+    private func payHostFee(_ checkout: APIClient.Checkout, purse id: String) async throws -> Bool {
+        guard let url = URL(string: checkout.url) else { throw APIClient.APIError.server("That checkout link is broken. Try again.") }
+        if try await payments.open(url) { return true }
+        // Closed: call it off unless the payment already landed.
+        return (try? await api.cancelCheckout(purseID: id)) == false
+    }
+
+    /// Balances and Shields as the server has them.
+    func refreshMe() async {
+        guard !isDemo, api.isConfigured, let me = try? await api.me() else { return }
+        profile.shields = me.shields
+        profile.league = League(rawValue: me.league) ?? profile.league
+        profile.vaultCents = me.vaultCents ?? profile.vaultCents
+        profile.creditCents = me.creditCents ?? profile.creditCents
+        profile.inviteCode = me.inviteCode ?? profile.inviteCode
+        profile.currency = me.currency ?? profile.currency
+        if let n = me.displayName, !n.isEmpty { profile.displayName = n }
+        if let b = me.birthDate { profile.birthDate = b }
+        if let c = me.country {
+            profile.country = c
+            profile.region = me.region
+        }
+        persist()
+    }
+
+    /// Sends name, date of birth and place. The server keeps date of birth and
+    /// place once set and says whether paid races are open where this person lives.
+    func saveProfile() async throws {
+        guard !isDemo, api.isConfigured, api.session != nil else { return }
+        let name = profile.displayName?.trimmingCharacters(in: .whitespaces)
+        let r = try await api.saveProfile(.init(displayName: name?.isEmpty == false ? name : nil, birthDate: profile.birthDate,
+                                                country: profile.country, region: profile.region))
+        if let c = r.country {
+            profile.country = c
+            profile.region = r.region
+        }
+        profile.inviteCode = r.inviteCode ?? profile.inviteCode
+        profile.paidRacesAvailable = r.paidRacesAvailable
+        persist()
+    }
+
+    /// Links into the app: steppie://paid (back from a checkout opened
+    /// outside the app) and steppie://p/CODE (a purse code from a friend).
+    func open(_ url: URL) async {
+        guard url.scheme == "steppie" else { return }
+        switch url.host {
+        case "paid":
+            await refresh()
+            await refreshMe()
+        case "p":
+            let code = url.pathComponents.dropFirst().first ?? ""
+            guard !code.isEmpty, let p = await findPurse(code: code) else { return }
+            tab = .races
+            racesMode = .purses
+            racesPath = NavigationPath()
+            racesPath.append(p)
+        default:
+            break
+        }
     }
 
     func loadPurses() async {
@@ -686,32 +821,50 @@ final class AppModel {
 
     // MARK: Vault
 
-    func cashOut(cents: Int, method: CashOut.Method) async throws {
+    /// Sends Vault money out through Whop. The server checks the daily limit,
+    /// debits the Vault and picks how Whop pays it.
+    func cashOut(cents: Int) async throws -> CashOut.Receipt {
         guard cents >= CashOut.minimumCents, cents <= profile.vaultCents else { throw EnterError.notEnoughToCashOut }
-        let today = ledger.filter { $0.kind == .cashout && Calendar.current.isDateInToday($0.date) }.reduce(0) { $0 + $1.amount.cents }
-        guard today + cents <= CashOut.dailyLimitCents else { throw EnterError.overDailyLimit }
-        if isDemo || !api.isConfigured {
+        if isDemo {
             try await Task.sleep(for: .milliseconds(900))
-        } else {
-            try await api.cashOut(cents: cents, method: method.rawValue)
+            let amount = Money(cents: cents, currency: currency)
+            profile.vaultCents -= cents
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Cash-out", kind: .cashout, amount: amount, reference: "co_demo"), at: 0)
+            persist()
+            Haptics.success()
+            return CashOut.Receipt(amount: amount, method: .whop, claimURL: nil, claimExpiresAt: nil, delayed: false)
         }
-        profile.vaultCents -= cents
-        ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: method.title, kind: .cashout,
-                                  amount: Money(cents: cents, currency: currency), reference: "po_\(Int.random(in: 100_000...999_999))"), at: 0)
-        persist()
+        guard api.isConfigured else { throw APIClient.APIError.notConfigured }
+        let c = try await api.cashOut(cents: cents)
+        await refreshMe()
+        await refreshLedger()
         Haptics.success()
+        return CashOut.Receipt(amount: Money(cents: c.amountCents, currency: c.currency),
+                               method: CashOut.Method(rawValue: c.method) ?? .whop,
+                               claimURL: c.claimUrl.flatMap(URL.init(string:)),
+                               claimExpiresAt: c.claimExpiresAt, delayed: c.delayed)
     }
 
-    /// A friend's code: $5 of entry credit for you now, $5 for them after your first paid entry.
+    /// A friend's code: entry credit for you now, a bonus for them after your
+    /// first paid entry. Before sign-in (onboarding) the code waits and is
+    /// sent right after; the server books the credit.
     func redeemInvite(_ raw: String) async throws {
         let code = raw.trimmingCharacters(in: .whitespaces).uppercased()
         guard Invite.isValid(code), code != profile.inviteCode, profile.invitedBy == nil else { throw EnterError.badCode }
-        // Before sign-in (onboarding) the code waits here and is sent right after.
-        if !isDemo && api.isConfigured && profile.isSignedIn { try await api.redeemInvite(code: code) }
-        profile.invitedBy = code
-        profile.creditCents += Invite.newMemberCreditCents
-        ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Code \(code)", kind: .credit,
-                                  amount: Money(cents: Invite.newMemberCreditCents, currency: currency), reference: "inv_\(code)"), at: 0)
+        if isDemo {
+            profile.invitedBy = code
+            profile.creditCents += Invite.newMemberCreditCents
+            ledger.insert(LedgerEntry(id: UUID(), date: .now, raceName: "Code \(code)", kind: .credit,
+                                      amount: Money(cents: Invite.newMemberCreditCents, currency: currency), reference: "inv_\(code)"), at: 0)
+        } else if api.isConfigured, profile.isSignedIn {
+            try await api.redeemInvite(code: code, currency: currency)
+            profile.invitedBy = code
+            profile.pendingInvite = nil
+            await refreshMe()
+            await refreshLedger()
+        } else {
+            profile.pendingInvite = code
+        }
         persist()
         Haptics.success()
     }
@@ -734,14 +887,17 @@ final class AppModel {
     /// Returns nil if the person closed the payment sheet.
     func hostPurse(name raw: String, kind: PurseKind, dailyGoal: Int, days: Int, entryUnits: Int, startsAt: Date) async throws -> Purse? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !profile.isSignedIn && !isDemo { throw EnterError.needsSignIn }
+        if !isDemo, let e = moneyGate() { throw e }
         var p: Purse
         if !isDemo && api.isConfigured {
             let reply = try await api.hostPurse(.init(name: name, kind: kind.rawValue, dailyGoal: dailyGoal, days: days,
-                                                      entryUnits: entryUnits, currency: currency, startsAt: startsAt))
-            if let pay = reply.payment {
-                guard try await payments.pay(pay, currency: currency, label: "Pay host fee") == .paid else { return nil }
+                                                      entryUnits: entryUnits, currency: currency, startsAt: startsAt,
+                                                      birthYear: profile.birthYear, birthDate: profile.birthDate,
+                                                      country: profile.country, region: profile.region))
+            if let checkout = reply.checkout {
+                guard try await payHostFee(checkout, purse: reply.purse.id) else { return nil }
             }
+            await refreshMe()
             p = reply.purse
         } else {
             try await Task.sleep(for: .milliseconds(700))
@@ -786,19 +942,48 @@ final class AppModel {
         try? await health.saveWeight(kg: kg, date: .now)
     }
 
-    func signedIn(appleUserID: String, name: String?) {
+    /// After Sign in with Apple: saves name, date of birth and place on the
+    /// server, then sends a friend's code typed during onboarding.
+    func signedIn(appleUserID: String, name: String?) async throws {
         profile.appleUserID = appleUserID
         if let name, !name.isEmpty { profile.displayName = name }
         persist()
-        if let code = profile.invitedBy, !isDemo, api.isConfigured {
-            Task { try? await api.redeemInvite(code: code) }
+        await refreshMe()        // a returning account: the server's name, place and balances
+        try await saveProfile()
+        await checkPro()
+        if let code = profile.pendingInvite {
+            profile.pendingInvite = nil
+            do { try await redeemInvite(code) } catch { lastError = "Code \(code): \(error.localizedDescription)" }
+            persist()
         }
     }
 
-    func deleteAccount() async {
-        try? await api.deleteAccount()
+    enum DeleteResult {
+        /// Gone on the server. `claimURL` is set when the Vault went out as a Whop claim link.
+        case deleted(claimURL: URL?)
+        /// Money in the Vault: cash it out or give it up first.
+        case vaultChoice(Money)
+        /// A race still running, a cash-out on its way, or no way to pay the Vault out.
+        case blocked(String)
+    }
+
+    /// Deletes the account on the server. Money decides the order: a running
+    /// race or a cash-out on its way blocks it, and Vault money needs a choice.
+    /// Call `wipeLocal()` once the person has seen the result.
+    func deleteAccount(vault: String? = nil) async -> DeleteResult {
+        guard !isDemo, api.isConfigured, api.session != nil else { return .deleted(claimURL: nil) }
+        do {
+            return .deleted(claimURL: try await api.deleteAccount(vault: vault))
+        } catch APIClient.APIError.refused(code: "vault_not_empty", message: _, vaultCents: let cents) {
+            return .vaultChoice(Money(cents: cents ?? profile.vaultCents, currency: currency))
+        } catch {
+            return .blocked(error.localizedDescription)
+        }
+    }
+
+    func wipeLocal() {
         profileStore.delete(); racesStore.delete(); ledgerStore.delete()
-        profile = Profile(); races = []; ledger = []
+        profile = Profile(); races = []; ledger = []; isPro = false
     }
 
     func persist() {

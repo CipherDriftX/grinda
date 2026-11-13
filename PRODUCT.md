@@ -8,7 +8,7 @@ ios
 
 ## Stack
 
-Delegated. Native Swift 6 + SwiftUI (iOS 17+), HealthKit, Swift Charts, WidgetKit, StoreKit 2, Stripe iOS SDK (PaymentSheet). Project generated with XcodeGen from `ios/project.yml`. Backend: Supabase (Postgres, Row Level Security, Sign in with Apple, Edge Functions in TypeScript/Deno, pg_cron). CI and App Store delivery: GitHub Actions macOS runners + fastlane. Chosen because native SwiftUI gives the best animation fidelity, HealthKit access, and App Store review path for an iPhone-first product.
+Delegated. Native Swift (Swift 5 language mode) + SwiftUI (iOS 17+), HealthKit, Swift Charts, WidgetKit, StoreKit 2, Whop hosted checkout in Apple's secure web sheet (ASWebAuthenticationSession). Project generated with XcodeGen from `ios/project.yml`. Backend: Supabase (Postgres, Row Level Security, Sign in with Apple, Edge Functions in TypeScript/Deno, pg_cron). CI and App Store delivery: GitHub Actions macOS runners + fastlane. Chosen because native SwiftUI gives the best animation fidelity, HealthKit access, and App Store review path for an iPhone-first product.
 
 ## Users
 
@@ -18,11 +18,11 @@ Adults (18+) who want to lose weight and have tried and quit before. They know w
 
 Steppie turns a daily walking goal into money on the line. There are two ways to play. In a **purse race** everyone pays an entry, walks the daily goal every day, and the finishers split the whole purse, so walking pays. In a **solo race** the user stakes their own money (e.g. 10,000 steps a day for 7 days): finish and every cent comes back, miss and Steppie keeps the stake. The purpose is weight loss through walking; the money is the mechanism that makes people actually do it. Purse races follow Steppa's proven loop in Steppie's own world; the full map is `docs/PURSES.md`.
 
-The business: a fee on every purse entry ($0.50 + 4%, win or lose), plus solo stakers × stakes each × average stake × miss rate, plus Shields and Pro. Steppie grows by moving the first three (more people backing themselves, more often, with bigger stakes), never by engineering misses. The full playbook is `docs/STRATEGY.md`.
+The business: a fee on every purse entry (0.50 + 4% when the balance pays, 0.99 + 5% when a card does, win or lose), plus solo stakers × stakes each × average stake × miss rate, plus Shields and Pro. Steppie grows by moving the first three (more people backing themselves, more often, with bigger stakes), never by engineering misses. The full playbook is `docs/STRATEGY.md`.
 
 ## Positioning
 
-- **Your money never leaves if you walk.** For challenges up to 6 days the card is only authorized (a hold), never charged; the hold is released the moment the challenge settles. Longer challenges are charged and refunded in full, automatically, within minutes of settlement.
+- **Finish and every cent comes back.** A finished solo race is refunded in full, automatically, when it settles 3 hours after the last day: the card part to the card, the Vault part to the Vault. A purse pays every finisher 24 hours after its last day.
 - **Skill, not luck.** Whether money comes back depends only on steps walked. No chance element touches money. Purse races split the purse evenly among finishers; solo races pit you against your past self.
 - **Show the math.** Every purse shows its total, who is still in, and what a finisher gets at real finish rates, before you join.
 - **Honest about how it makes money.** Steppie earns a fee on purse entries, missed solo stakes and an optional Pro subscription, and shows this plainly, including a public, live "refunded vs. kept" ledger. Steppie never takes a cut of the purse itself.
@@ -31,7 +31,7 @@ The business: a fee on every purse entry ($0.50 + 4%, win or lose), plus solo st
 ## Operating Context
 
 - Steps come from Apple Health (HealthKit). Any tracker that writes to Apple Health works: Apple Watch, iPhone motion, Garmin Connect, Fitbit (via sync apps), Oura, Withings, Samsung Health bridges, Google Fit bridges.
-- Stakes are paid with Stripe (Apple Pay, cards, SEPA where available) via PaymentSheet. Payouts are refunds or released holds, back to the original payment method.
+- Entries and stakes are paid from the Vault first, then by card on Whop's hosted checkout. A race goes live only when Whop's webhook reaches the server. Refunds of the card part go back through Whop; winnings land in the Vault; cash-outs go out as Whop transfers or claim links.
 - Days are counted in the user's time zone at challenge start; settlement runs after the day closes plus a sync grace window.
 - Marketing runs through X (Twitter) and Discord: shareable progress cards and real, aggregate public statistics.
 
@@ -42,10 +42,10 @@ The business: a fee on every purse entry ($0.50 + 4%, win or lose), plus solo st
 - Steppie Shields (StoreKit consumable): cover one missed day each, up to 2 per race, unused ones return. One free with every account.
 - Comeback: one 5-day race within 72 h of a miss; finishing refunds 50% of the missed stake.
 - Game layer (no cash value): Grit and weekly leagues, the stake ladder, Shoe Boxes with cosmetic trainers for Steppie.
-- Steppie Pro (StoreKit subscription): custom challenge builder, advanced insights, multiple concurrent challenges, friend challenges, the Stride S icon.
-- Anti-cheat: ignore manually entered HealthKit samples (`HKMetadataKeyWasUserEntered`), prefer watch/phone motion sources, flag physiologically implausible cadence (> 250 steps/min sustained), device attestation (App Attest) on step submissions.
+- Steppie Pro (StoreKit subscription, checked with Apple on the server): no fee when the balance pays and a lower card fee, up to 5 races and purses at once, one free public purse a month, the custom solo race builder, advanced insights, the gold mane badge and the Stride S icon.
+- Anti-cheat: ignore manually entered HealthKit samples (`HKMetadataKeyWasUserEntered`), prefer watch/phone motion sources, flag physiologically implausible cadence (> 250 steps/min sustained) for a person to review. Device attestation (App Attest) is not built yet.
 - App Store: account deletion in-app, Sign in with Apple, HealthKit purpose strings, no HealthKit data used for advertising, 18+ age gate for staking.
-- Undecided: legal review per country for commitment contracts (consumer-law "penalty clause" rules in DE), charity option for forfeits, friend/team pools.
+- Undecided: legal review per country for commitment contracts (consumer-law "penalty clause" rules in DE), charity option for forfeits.
 
 ## Brand Commitments
 

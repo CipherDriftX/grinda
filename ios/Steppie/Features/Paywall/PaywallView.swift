@@ -4,6 +4,7 @@ import StoreKit
 /// Steppie Pro. Native SubscriptionStoreView with our own marketing header.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppModel.self) private var model
 
     var body: some View {
         SubscriptionStoreView(groupID: StoreService.groupID) {
@@ -19,8 +20,7 @@ struct PaywallView: View {
                     .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(.white)
                 VStack(alignment: .leading, spacing: 14) {
-                    ProLine(symbol: "percent", text: "No service fee on any purse entry")
-                    ProLine(symbol: "gift", text: "$10 of entry credit every month")
+                    ProLine(symbol: "percent", text: "No service fee when your balance pays, lower fee by card")
                     ProLine(symbol: "square.stack.3d.up", text: "Run up to 5 races and purses at once")
                     ProLine(symbol: "megaphone", text: "Host one public purse a month free, and earn 5% of entries")
                     ProLine(symbol: "slider.horizontal.3", text: "Build your own solo races: any goal, any length")
@@ -31,6 +31,13 @@ struct PaywallView: View {
                     .font(.subheadline)
                     .foregroundStyle(Palette.onFieldSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if !model.profile.paidRacesAvailable {
+                    // Said before the purchase, not after: the fee and host perks need paid races.
+                    Text("Paid races aren't open to you where you live, so the fee and host perks won't apply. Insights, the badge and the icon still do.")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,8 +48,17 @@ struct PaywallView: View {
         .storeButton(.visible, for: .restorePurchases)
         .storeButton(.visible, for: .cancellation)
         .tint(Palette.cobalt)
+        // The account rides along so the server can tie the subscription to it.
+        .inAppPurchaseOptions { [token = model.accountToken] _ in
+            token.map { [.appAccountToken($0)] } ?? []
+        }
         .onInAppPurchaseCompletion { _, result in
-            if case .success(.success) = result { dismiss() }
+            guard case .success(.success(let verification)) = result else { return }
+            if case .verified(let t) = verification {
+                await model.checkPro(transaction: t)
+                await t.finish()
+            }
+            dismiss()
         }
     }
 }

@@ -64,7 +64,7 @@ struct JoinPurseView: View {
 
     private func bib(_ p: Purse) -> some View {
         let dates = (0..<p.days).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: Calendar.current.startOfDay(for: p.startsAt)) }
-        return BibCard(name: p.name, bibNumber: 3_318, dailyGoal: p.dailyGoal, dayLabel: p.lengthLabel, stake: p.entry, usesHold: false,
+        return BibCard(name: p.name, bibNumber: 3_318, dailyGoal: p.dailyGoal, dayLabel: p.lengthLabel, stake: p.entry,
                        days: dates.map { DayRecord(date: $0, steps: 0, goal: p.dailyGoal, state: .upcoming) },
                        settles: p.settlesAt, pinned: pins,
                        purse: PurseTicket(purseID: p.id, entrants: p.entrants + 1, potCents: p.potCents + p.entryUnits * 100, feeCents: 0, window: p.window))
@@ -72,21 +72,22 @@ struct JoinPurseView: View {
 
     private func money(_ p: Purse) -> some View {
         let q = model.joinQuote(p)
-        let serviceFee = PurseFee.serviceCents(entryCents: q.entry, isPro: model.isPro)
-        let hostFee = PurseFee.hostCents(entryCents: q.entry, kind: p.kind)
         return VStack(alignment: .leading, spacing: 12) {
             Text("The money").font(.system(.title3, weight: .bold))
             VStack(spacing: 10) {
                 LeaderLine(label: "Entry, into the purse", value: p.entry.formatted, emphasis: false)
-                LeaderLine(label: model.isPro ? "Service fee (Pro: none)" : "Service fee", value: Money(cents: serviceFee, currency: p.currency).formatted, emphasis: false)
-                if hostFee > 0 {
-                    LeaderLine(label: "Host's 5%", value: Money(cents: hostFee, currency: p.currency).formatted, emphasis: false)
+                LeaderLine(label: q.funding == .balance ? "Service fee (paid from balance)" : "Service fee (card)",
+                           value: Money(cents: q.fee, currency: p.currency).formatted, emphasis: false)
+                if q.host > 0 {
+                    LeaderLine(label: "Host's 5%", value: Money(cents: q.host, currency: p.currency).formatted, emphasis: false)
                 }
                 Divider().overlay(Palette.hairline)
-                LeaderLine(label: "Total", value: Money(cents: q.entry + q.fee, currency: p.currency).formatted, emphasis: false)
-                if q.fromVault > 0 {
-                    LeaderLine(label: "From your Vault", value: Money(cents: q.fromVault, currency: p.currency).formatted, emphasis: true)
-                    LeaderLine(label: "On your card", value: Money(cents: q.fromCard, currency: p.currency).formatted, emphasis: false)
+                LeaderLine(label: "Total", value: Money(cents: q.total, currency: p.currency).formatted, emphasis: false)
+                if q.fromBalance > 0 {
+                    LeaderLine(label: "From your balance", value: Money(cents: q.fromBalance, currency: p.currency).formatted, emphasis: true)
+                }
+                if q.fromCard > 0 {
+                    LeaderLine(label: "By card", value: Money(cents: q.fromCard, currency: p.currency).formatted, emphasis: false)
                 }
             }
             .padding(16)
@@ -97,7 +98,7 @@ struct JoinPurseView: View {
                 .fixedSize(horizontal: false, vertical: true)
             if !model.isPro {
                 Button { model.showingPaywall = true } label: {
-                    Label("Pro members pay no fee", systemImage: "sparkles")
+                    Label("Pro: no fee from your balance", systemImage: "sparkles")
                         .font(.system(.subheadline, weight: .semibold))
                 }
                 .frame(minHeight: 44)
@@ -152,7 +153,7 @@ struct JoinPurseView: View {
                 }
                 .id(attempt)
             }
-            Text("Pinning means you agree to the Purse Rules. Card payments are handled by Stripe. 18+ only.")
+            Text("Pinning means you agree to the Purse Rules. Card payments are handled by Whop. 18+ only.")
                 .font(.caption)
                 .foregroundStyle(Palette.inkSecondary)
                 .multilineTextAlignment(.center)
@@ -198,6 +199,7 @@ struct PurseEnteredOverlay: View {
     @State private var hop = 0
 
     private var ink: Color { Color(hex: purse.art.color) }
+    private var bonus: String { Money(cents: Invite.newMemberCreditCents, currency: purse.currency).formatted }
 
     var body: some View {
         ZStack {
@@ -240,8 +242,8 @@ struct PurseEnteredOverlay: View {
                     .foregroundStyle(.white.opacity(0.88))
                     .multilineTextAlignment(.center)
                 Spacer()
-                ShareLink(item: "I just joined a \(purse.pot.formatted) walking purse on Steppie. Finish every day, split the purse. Code \(model.inviteCode) gets you $5.") {
-                    Label("Bring a friend, both get $5", systemImage: "person.2.fill")
+                ShareLink(item: "I just joined a \(purse.pot.formatted) walking purse on Steppie. Finish every day, split the purse. My code \(model.inviteCode) gets you \(bonus) to start." + (purse.shareURL.map { " Join this purse: \($0.absoluteString)" } ?? "")) {
+                    Label("Bring a friend, both get \(bonus)", systemImage: "person.2.fill")
                 }
                 .buttonStyle(.onField)
                 Button("Go to today", action: onDone)

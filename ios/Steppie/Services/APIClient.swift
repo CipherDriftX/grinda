@@ -18,13 +18,19 @@ final class APIClient {
 
     enum APIError: LocalizedError {
         case notConfigured
+        /// The server answered no (4xx), with a reason a person can read.
         case server(String)
+        /// The server or the network failed (5xx); worth trying again later.
+        case unavailable(String)
+        /// A refusal the app acts on, e.g. "vault_not_empty" from delete-account.
+        case refused(code: String, message: String, vaultCents: Int?)
         case unauthorized
 
         var errorDescription: String? {
             switch self {
-            case .notConfigured: "Payments aren't set up in this build yet."
-            case .server(let m): m
+            case .notConfigured: "This build isn't connected to the Steppie server."
+            case .server(let m), .unavailable(let m): m
+            case .refused(_, let m, _): m
             case .unauthorized: "Please sign in again."
             }
         }
@@ -38,9 +44,30 @@ final class APIClient {
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.keyDecodingStrategy = .convertFromSnakeCase
-        d.dateDecodingStrategy = .iso8601
+        // Postgres writes microseconds ("2026-11-12T09:30:00.123456+00:00"),
+        // which the plain .iso8601 strategy refuses.
+        d.dateDecodingStrategy = .custom { dec in
+            let s = try dec.singleValueContainer().decode(String.self)
+            guard let date = APIClient.date(from: s) else {
+                throw DecodingError.dataCorrupted(.init(codingPath: dec.codingPath, debugDescription: "Not a date: \(s)"))
+            }
+            return date
+        }
         return d
     }()
+
+    /// Reads ISO 8601 times with or without fractional seconds, and plain days.
+    static func date(from raw: String) -> Date? {
+        // Keep at most 3 fraction digits; the formatter is reliable with milliseconds.
+        let s = raw.replacingOccurrences(of: #"(\.\d{3})\d+"#, with: "$1", options: .regularExpression)
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withFullDate]
+        return f.date(from: s)
+    }
 
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
@@ -97,22 +124,52 @@ final class APIClient {
         let timezone: String
         let startDate: String // yyyy-MM-dd, local
         let birthYear: Int?
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
         var shieldsEquipped: Int = 0
         var comebackOf: UUID? = nil
     }
 
-    struct CreateStakeReply: Decodable {
-        let raceId: UUID
-        let bibNumber: Int
-        let paymentIntentClientSecret: String
-        let customerId: String
-        let ephemeralKey: String
-        let publishableKey: String
-        let captureMethod: String // "manual" (hold) or "automatic"
+    /// A Whop hosted checkout for the part a card pays.
+    struct Checkout: Decodable, Hashable {
+        let id: String?
+        let url: String
     }
 
-    func createStake(_ req: CreateStakeRequest) async throws -> CreateStakeReply {
+    /// A new solo race or purse entry. `checkout` is nil when the Vault (and
+    /// entry credit) paid all of it and the race is already live.
+    struct EntryReply: Decodable {
+        let raceId: UUID
+        let bibNumber: Int
+        let checkout: Checkout?
+    }
+
+    func createStake(_ req: CreateStakeRequest) async throws -> EntryReply {
         try await send("functions/v1/create-stake", body: req)
+    }
+
+    /// Calls off an unpaid checkout. True when it was called off; false when
+    /// the payment had already landed.
+    func cancelCheckout(raceID: UUID) async throws -> Bool {
+        struct Body: Encodable { let raceId: UUID }
+        struct Reply: Decodable { let cancelled: Bool }
+        let r: Reply = try await send("functions/v1/cancel-checkout", body: Body(raceId: raceID))
+        return r.cancelled
+    }
+
+    func cancelCheckout(purseID: String) async throws -> Bool {
+        struct Body: Encodable { let purseId: String }
+        struct Reply: Decodable { let cancelled: Bool }
+        let r: Reply = try await send("functions/v1/cancel-checkout", body: Body(purseId: purseID))
+        return r.cancelled
+    }
+
+    /// The server's status for one of your races ("pendingPayment", "active", ...).
+    func raceStatus(_ id: UUID) async throws -> String? {
+        struct Row: Decodable { let status: String }
+        let rows: [Row] = try await get("rest/v1/races?select=status&id=eq.\(id.uuidString.lowercased())")
+        return rows.first?.status
     }
 
     struct DaySubmission: Encodable {
@@ -124,12 +181,14 @@ final class APIClient {
     struct SubmitSteps: Encodable {
         let raceId: UUID
         let days: [DaySubmission]
-        let attestation: String?
     }
 
-    func submitSteps(_ body: SubmitSteps) async throws {
-        struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/submit-steps", body: body)
+    /// Returns when the server saved each day ("2026-11-12": time). A day
+    /// sent again within a minute isn't saved again and isn't listed.
+    func submitSteps(_ body: SubmitSteps) async throws -> [String: Date] {
+        struct Reply: Decodable { let ok: Bool; let synced: [String: Date]? }
+        let r: Reply = try await send("functions/v1/submit-steps", body: body)
+        return r.synced ?? [:]
     }
 
     struct RemoteRace: Decodable {
@@ -173,17 +232,13 @@ final class APIClient {
         let purseId: String
         let timezone: String
         let birthYear: Int?
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
         var shieldsEquipped: Int = 0
     }
 
-    struct JoinPurseReply: Decodable {
-        let raceId: UUID
-        let bibNumber: Int
-        /// Missing when the Vault balance covered the whole entry.
-        let payment: CreateStakeReply?
-    }
-
-    func joinPurse(_ req: JoinPurseRequest) async throws -> JoinPurseReply {
+    func joinPurse(_ req: JoinPurseRequest) async throws -> EntryReply {
         try await send("functions/v1/join-purse", body: req)
     }
 
@@ -226,16 +281,54 @@ final class APIClient {
 
     // MARK: Vault
 
-    func cashOut(cents: Int, method: String) async throws {
-        struct Body: Encodable { let amountCents: Int; let method: String }
-        struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/cash-out", body: Body(amountCents: cents, method: method))
+    /// A cash-out as the server made it. Whop pays it to the Whop account you
+    /// paid with ("whop"), or as a claim link ("claim_link") when there isn't one.
+    struct RemoteCashOut: Decodable {
+        let id: UUID
+        let amountCents: Int
+        let currency: String
+        let method: String
+        let status: String
+        let claimUrl: String?
+        let claimExpiresAt: Date?
+        let delayed: Bool
     }
 
-    func redeemInvite(code: String) async throws {
-        struct Body: Encodable { let code: String }
+    /// The server picks how it's paid; the app only says how much.
+    func cashOut(cents: Int) async throws -> RemoteCashOut {
+        struct Body: Encodable { let amountCents: Int }
+        struct Reply: Decodable { let cashout: RemoteCashOut }
+        let r: Reply = try await send("functions/v1/cash-out", body: Body(amountCents: cents))
+        return r.cashout
+    }
+
+    /// The credit is booked in the person's server currency, else `currency`.
+    func redeemInvite(code: String, currency: String) async throws {
+        struct Body: Encodable { let code: String; let currency: String }
         struct Ok: Decodable { let ok: Bool }
-        let _: Ok = try await send("functions/v1/redeem-invite", body: Body(code: code))
+        let _: Ok = try await send("functions/v1/redeem-invite", body: Body(code: code, currency: currency))
+    }
+
+    /// Name, date of birth and place. Date of birth and place are kept once
+    /// the server has them; sending them again changes nothing.
+    struct ProfileRequest: Encodable {
+        var displayName: String?
+        var birthDate: String?
+        var country: String?
+        var region: String?
+    }
+
+    struct SavedProfile: Decodable {
+        let displayName: String?
+        let inviteCode: String?
+        let country: String?
+        let region: String?
+        let hasBirthDate: Bool
+        let paidRacesAvailable: Bool
+    }
+
+    func saveProfile(_ req: ProfileRequest) async throws -> SavedProfile {
+        try await send("functions/v1/save-profile", body: req)
     }
 
     func submitDispute(raceID: UUID, date: String, note: String, image: Data?) async throws {
@@ -252,13 +345,17 @@ final class APIClient {
         let entryUnits: Int
         let currency: String
         let startsAt: Date
+        var birthYear: Int? = nil
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
     }
 
     struct HostPurseReply: Decodable {
         let purse: Purse
         /// Set when a public purse's host fee needs a card (Vault first, free
-        /// once a month with Pro).
-        let payment: CreateStakeReply?
+        /// once a month with Pro). The purse is listed once it's paid.
+        let checkout: Checkout?
     }
 
     /// Creates a member purse. The server picks the code.
@@ -279,7 +376,7 @@ final class APIClient {
         let kind: String
         let amountCents: Int
         let currency: String
-        let stripeRef: String
+        let ref: String?
     }
 
     func ledger() async throws -> [RemoteLedger] {
@@ -292,11 +389,16 @@ final class APIClient {
         var vaultCents: Int? = nil
         var creditCents: Int? = nil
         var inviteCode: String? = nil
+        var currency: String? = nil
+        var displayName: String? = nil
+        var birthDate: String? = nil
+        var country: String? = nil
+        var region: String? = nil
     }
 
     func me() async throws -> Me? {
         guard let id = session?.userID else { return nil }
-        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league,vault_cents,credit_cents,invite_code&id=eq.\(id)")
+        let rows: [Me] = try await get("rest/v1/profiles?select=shields,league,vault_cents,credit_cents,invite_code,currency,display_name,birth_date,country,region&id=eq.\(id)")
         return rows.first
     }
 
@@ -313,6 +415,18 @@ final class APIClient {
     }
 
     /// Credits Shields bought in the App Store; returns the new locker count.
+    struct ProReply: Decodable {
+        let isPro: Bool
+        let expiresAt: Date?
+    }
+
+    /// The server asks Apple about the subscription (this transaction, or the
+    /// one it already knows) and saves Pro on the profile.
+    func verifyPro(transactionID: UInt64?) async throws -> ProReply {
+        struct Body: Encodable { let transactionId: String? }
+        return try await send("functions/v1/verify-pro", body: Body(transactionId: transactionID.map { String($0) }))
+    }
+
     func grantShields(transactionID: UInt64) async throws -> Int {
         struct Body: Encodable { let transactionId: String }
         struct Reply: Decodable { let shields: Int }
@@ -324,11 +438,15 @@ final class APIClient {
         try await get("functions/v1/public-stats?currency=\(Money.localCurrency)", auth: false)
     }
 
-    func deleteAccount() async throws {
-        struct Ok: Decodable { let ok: Bool }
-        struct Empty: Encodable {}
-        let _: Ok = try await send("functions/v1/delete-account", body: Empty())
+    /// `vault`: "cash_out" or "give_up" when the Vault isn't empty. Returns the
+    /// claim link when the Vault went out as one (the only way to it afterwards).
+    func deleteAccount(vault: String?) async throws -> URL? {
+        struct Body: Encodable { let vault: String? }
+        struct Payout: Decodable { let claimUrl: String? }
+        struct Reply: Decodable { let ok: Bool; let payout: Payout? }
+        let r: Reply = try await send("functions/v1/delete-account", body: Body(vault: vault))
         session = nil
+        return r.payout?.claimUrl.flatMap { URL(string: $0) }
     }
 
     // MARK: Transport
@@ -367,16 +485,24 @@ final class APIClient {
         if code == 401 { throw APIError.unauthorized }
         guard (200..<300).contains(code) else {
             let e = try? decoder.decode(ServerError.self, from: data)
-            throw APIError.server(e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code)).")
+            let message = e?.error ?? e?.message ?? e?.msg ?? "Something went wrong (\(code))."
+            if code >= 500 { throw APIError.unavailable(message) }
+            if let c = e?.code, !c.isEmpty, e?.error != nil {
+                throw APIError.refused(code: c, message: message, vaultCents: e?.vaultCents)
+            }
+            throw APIError.server(message)
         }
         return try decoder.decode(T.self, from: data)
     }
 }
 
+/// Edge Functions answer {error, code?, vault_cents?}; PostgREST answers {message, code}.
 private struct ServerError: Decodable {
     let error: String?
     let message: String?
     let msg: String?
+    let code: String?
+    let vaultCents: Int?
 }
 
 /// Minimal Keychain wrapper for the auth session.
